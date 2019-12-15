@@ -1,0 +1,78 @@
+<html>
+<body>
+Local: <br>
+<video id="localVideo" autoplay></video><br>
+<button id="btn1">Call</button><br>
+Remote: <br>
+<video id="remoteVideo" autoplay></video>
+
+<script>
+
+    var socket = new WebSocket("ws://192.168.112.134:3000");
+
+    //socket.addEventListener()
+
+
+
+    var start = function () {
+        // stun和turn服务器
+        var iceServer = null;
+
+        // 创建PeerConnection实例 (参数为null则没有iceserver，即使没有stunserver和turnserver，仍可在局域网下通讯)
+        var pc1 = new webkitRTCPeerConnection(iceServer);
+
+        socket.onmessage = function(evt)
+        {
+            console.log(evt.data);
+            var desc = new RTCSessionDescription();
+            desc.sdp = evt.data;
+            desc.type = 'answer';
+            pc1.setRemoteDescription(desc);
+        }
+
+        // 发送ICE候选到其他客户端
+        pc1.onicecandidate = function(event){
+            console.log(event.candidate);
+            socket.send(JSON.stringify(event.candidate));
+        };
+
+        navigator.webkitGetUserMedia({
+            "audio": false,
+            "video": true
+        }, function(stream){
+            //绑定本地媒体流到video标签用于输出
+            document.getElementById('localVideo').srcObject = stream;
+            //向PeerConnection中加入需要发送的流
+            //pc1.addStream(stream);
+            for (const track of stream.getTracks()) {
+                pc1.addTrack(track);}
+            //如果是发起方则发送一个offer信令
+            pc1.createOffer(sendOfferFn, function (error) {
+                console.log('Failure callback: ' + error);
+            });
+
+        }, function(error){
+            //处理媒体流创建失败错误
+            console.log('getUserMedia error: ' + error);
+        });
+
+        // 发送offer和answer的函数，发送本地session描述
+        var sendOfferFn = function(desc){
+            console.log(desc)
+            pc1.setLocalDescription(desc);
+            socket.send(JSON.stringify(desc));
+        };
+
+    }
+
+
+    // 仅仅用于控制哪一端的浏览器发起offer，#号后面有值的一方发起
+    var btn1 = document.getElementById('btn1');
+    btn1.addEventListener('click', start);
+    // 与信令服务器的WebSocket连接
+
+
+
+</script>
+</body>
+</html>
