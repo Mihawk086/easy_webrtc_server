@@ -18,7 +18,7 @@
 namespace erizo {
     class WebRtcTransport :public std::enable_shared_from_this<WebRtcTransport>{
     public:
-        WebRtcTransport(xop::EventLoop* loop);
+        WebRtcTransport(xop::EventLoop* loop, std::string strIP, int16_t nPort);
         ~WebRtcTransport();
 
         void Start();

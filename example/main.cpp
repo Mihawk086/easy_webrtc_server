@@ -8,7 +8,6 @@
 #include "SignalServer.h"
 #include "webrtctransport/Utils.hpp"
 #include "FFmpegSrc.h"
-
 int main(){
     FFmpegSrc::GetInsatance()->Start();
 	Utils::Crypto::ClassInit();

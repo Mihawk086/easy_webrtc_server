@@ -3,7 +3,6 @@
  */
 
 #include <srtp2/srtp.h>
-//#include <nice/nice.h>
 
 #include <openssl/evp.h>
 #include <openssl/bio.h>
@@ -191,7 +190,7 @@ bool SrtpChannel::configureSrtpSession(srtp_t *session, const std::string &key, 
   policy.window_size = 1024;
   policy.allow_repeat_tx = 1;
   policy.next = NULL;
-  // ELOG_DEBUG("auth_tag_len %d", policy.rtp.auth_tag_len);
+  ELOG_DEBUG("auth_tag_len %d", policy.rtp.auth_tag_len);
 
   /*
   gsize len = 0;

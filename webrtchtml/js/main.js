@@ -38,7 +38,7 @@ function start() {
   if (window["WebSocket"]) 
   {
     		//var addr = "ws://" + location.host + ":9002" + "/wsasd";
-    var addr = "ws://" + "127.0.0.1" + ":3000";
+    var addr = "ws://" + "192.168.223.128" + ":3000";
         conn = new WebSocket(addr);
         conn.onclose = function(evt) 
         {

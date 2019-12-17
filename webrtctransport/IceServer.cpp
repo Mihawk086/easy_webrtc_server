@@ -4,6 +4,9 @@
 
 static constexpr size_t StunSerializeBufferSize{ 65536 };
 static uint8_t StunSerializeBuffer[StunSerializeBufferSize];
+
+DEFINE_LOGGER(IceServer, "IceServer");
+
 IceServer::IceServer()
 {
 }
@@ -22,9 +25,10 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 	{
 		if (packet->GetClass() == RTC::StunPacket::Class::REQUEST)
 		{
-			std::cout << "unknown method %#.3x in STUN Request => 400" <<
-				static_cast<unsigned int>(packet->GetMethod())<<std::endl;
-
+			ELOG_WARN("unknown method %#.3x in STUN Request => 400",
+				static_cast<unsigned int>(packet->GetMethod()));
+			ELOG_WARN("unknown method %#.3x in STUN Request => 400",
+				static_cast<unsigned int>(packet->GetMethod()));
 			// Reply 400.
 			RTC::StunPacket* response = packet->CreateErrorResponse(400);
 
@@ -36,8 +40,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 		}
 		else
 		{
-			std::cout << "ignoring STUN Indication or Response with unknown method %#.3x"<<
-				static_cast<unsigned int>(packet->GetMethod())<<std::endl;
+			ELOG_WARN("ignoring STUN Indication or Response with unknown method %#.3x",
+				static_cast<unsigned int>(packet->GetMethod()));
 		}
 
 		return;
@@ -48,7 +52,7 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 	{
 		if (packet->GetClass() == RTC::StunPacket::Class::REQUEST)
 		{
-			std::cout << "STUN Binding Request without FINGERPRINT => 400";
+			ELOG_WARN("STUN Binding Request without FINGERPRINT => 400");
 
 			// Reply 400.
 			RTC::StunPacket* response = packet->CreateErrorResponse(400);
@@ -61,7 +65,7 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 		}
 		else
 		{
-			std::cout << "ignoring STUN Binding Response without FINGERPRINT"<<std::endl;
+			ELOG_WARN("ignoring STUN Binding Response without FINGERPRINT");
 		}
 
 		return;
@@ -74,7 +78,7 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 		// USERNAME, MESSAGE-INTEGRITY and PRIORITY are required.
 		if (!packet->HasMessageIntegrity() || (packet->GetPriority() == 0u) || packet->GetUsername().empty())
 		{
-			std::cout << "mising required attributes in STUN Binding Request => 400" << std::endl;
+			ELOG_WARN("mising required attributes in STUN Binding Request => 400");
 
 			// Reply 400.
 			RTC::StunPacket* response = packet->CreateErrorResponse(400);
@@ -95,7 +99,7 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 		{
 			if (!this->oldPassword.empty())
 			{
-				std::cout << "new ICE credentials applied" << std::endl;
+				ELOG_DEBUG("new ICE credentials applied");
 
 				this->oldUsernameFragment.clear();
 				this->oldPassword.clear();
@@ -116,11 +120,11 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 				)
 				// clang-format on
 			{
-				std::cout << "using old ICE credentials" << std::endl;
+				ELOG_DEBUG("using old ICE credentials");
 
 				break;
 			}
-			std::cout << "wrong authentication in STUN Binding Request => 401" << std::endl;
+			ELOG_WARN("wrong authentication in STUN Binding Request => 401");
 
 			// Reply 401.
 			RTC::StunPacket* response = packet->CreateErrorResponse(401);
@@ -136,7 +140,7 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 
 		case RTC::StunPacket::Authentication::BAD_REQUEST:
 		{
-			std::cout << "cannot check authentication in STUN Binding Request => 400" << std::endl;
+			ELOG_WARN("cannot check authentication in STUN Binding Request => 400");
 
 			// Reply 400.
 			RTC::StunPacket* response = packet->CreateErrorResponse(400);
@@ -169,9 +173,9 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 		// 	return;
 		// }
 
-		std::cout << "processing STUN Binding Request [Priority:, UseCandidate:%s]"<<
-			static_cast<uint32_t>(packet->GetPriority())<<
-			(packet->HasUseCandidate() ? "true" : "false") << std::endl;
+		ELOG_DEBUG("processing STUN Binding Request [Priority:%d, UseCandidate:%s]",
+			static_cast<uint32_t>(packet->GetPriority()),
+			(packet->HasUseCandidate() ? "true" : "false"));
 
 		// Create a success response.
 		RTC::StunPacket* response = packet->CreateSuccessResponse();
@@ -201,21 +205,21 @@ void IceServer::ProcessStunPacket(RTC::StunPacket * packet, sockaddr_in * remote
 
 	case RTC::StunPacket::Class::INDICATION:
 	{
-		std::cout << "STUN Binding Indication processed" << std::endl;
+		ELOG_DEBUG("STUN Binding Indication processed");
 
 		break;
 	}
 
 	case RTC::StunPacket::Class::SUCCESS_RESPONSE:
 	{
-		std::cout << "STUN Binding Success Response processed" << std::endl;
+		ELOG_DEBUG("STUN Binding Success Response processed");
 
 		break;
 	}
 
 	case RTC::StunPacket::Class::ERROR_RESPONSE:
 	{
-		std::cout << "STUN Binding Error Response processed"<<std::endl;
+		ELOG_DEBUG("STUN Binding Error Response processed");
 
 		break;
 	}

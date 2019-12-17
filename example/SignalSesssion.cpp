@@ -12,7 +12,7 @@
 
 #include "FFmpegSrc.h"
 #include "MyLoop.h"
-
+#include "net/NetInterface.h"
 
 
 using namespace rapidjson;
@@ -24,7 +24,7 @@ SignalSesssion::SignalSesssion(boost::asio::io_service *ptr_io_service ,SignalSe
 
 void SignalSesssion::on_Open() {
 
-    m_webrtctransport.reset(new WebRtcTransport(MyLoop::GetLoop()));
+    m_webrtctransport.reset(new WebRtcTransport(MyLoop::GetLoop(),xop::NetInterface::getLocalIPAddress(),9500));
     m_webrtctransport->Start();
     Send(m_webrtctransport->GetLocalSdp());
     FFmpegSrc::GetInsatance()->AddClient(m_webrtctransport);

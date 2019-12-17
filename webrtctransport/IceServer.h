@@ -5,11 +5,13 @@
 
 #include "net/SocketUtil.h"
 #include "StunPacket.hpp"
+#include "logger.h"
 
 typedef std::function<void(char* buf, int len, struct sockaddr_in* remoteAddr)> UDPSOCKETSENDCB;
 
 class IceServer
 {
+	DECLARE_LOGGER();
 public:
 	enum class IceState
 	{

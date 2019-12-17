@@ -13,7 +13,7 @@ class FFmpegSrc
 public:
     static FFmpegSrc* GetInsatance();
 	~FFmpegSrc();
-    void inputH264(char* pcData, int iDataLen, uint32_t timestamp);
+    void InputH264(char* pcData, int iDataLen, uint32_t timestamp);
     void Start();
     void Stop();
     void ThreadEntry();

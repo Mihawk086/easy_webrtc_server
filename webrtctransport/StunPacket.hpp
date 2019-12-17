@@ -15,12 +15,14 @@
 #include <iphlpapi.h>
 #endif
 
+#include "logger.h"
 
 
 namespace RTC
 {
 	class StunPacket
 	{
+		DECLARE_LOGGER();
 	public:
 		// STUN message class.
 		enum class Class : uint16_t

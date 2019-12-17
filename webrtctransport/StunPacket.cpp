@@ -7,10 +7,11 @@
 #include <cstring> // std::memcmp(), std::memcpy()
 
 
-#define MS_WARN_TAG(a,b)
-
 namespace RTC
 {
+
+	DEFINE_LOGGER(StunPacket, "StunPacket");
+
 	/* Class variables. */
 
 	const uint8_t StunPacket::magicCookie[] = { 0x21, 0x12, 0xA4, 0x42 };
@@ -51,8 +52,7 @@ namespace RTC
 		// length field must be total size minus header's 20 bytes, and must be multiple of 4 Bytes.
 		if ((static_cast<size_t>(msgLength) != len - 20) || ((msgLength & 0x03) != 0))
 		{
-			MS_WARN_TAG(
-			  ice,
+			ELOG_DEBUG(
 			  "length field + 20 does not match total size (or it is not multiple of 4 bytes), "
 			  "packet discarded");
 
@@ -107,7 +107,7 @@ namespace RTC
 			// Ensure the attribute length is not greater than the remaining size.
 			if ((pos + 4 + attrLength) > len)
 			{
-				MS_WARN_TAG(ice, "the attribute length exceeds the remaining size, packet discarded");
+				ELOG_DEBUG( "the attribute length exceeds the remaining size, packet discarded");
 
 				delete packet;
 				return nullptr;
@@ -116,7 +116,7 @@ namespace RTC
 			// FINGERPRINT must be the last attribute.
 			if (hasFingerprint)
 			{
-				MS_WARN_TAG(ice, "attribute after FINGERPRINT is not allowed, packet discarded");
+				ELOG_DEBUG( "attribute after FINGERPRINT is not allowed, packet discarded");
 
 				delete packet;
 				return nullptr;
@@ -125,8 +125,7 @@ namespace RTC
 			// After a MESSAGE-INTEGRITY attribute just FINGERPRINT is allowed.
 			if (hasMessageIntegrity && attrType != Attribute::FINGERPRINT)
 			{
-				MS_WARN_TAG(
-				  ice,
+				ELOG_DEBUG(	  
 				  "attribute after MESSAGE-INTEGRITY other than FINGERPRINT is not allowed, "
 				  "packet discarded");
 
@@ -151,7 +150,7 @@ namespace RTC
 					// Ensure attribute length is 4 bytes.
 					if (attrLength != 4)
 					{
-						MS_WARN_TAG(ice, "attribute PRIORITY must be 4 bytes length, packet discarded");
+						ELOG_DEBUG( "attribute PRIORITY must be 4 bytes length, packet discarded");
 
 						delete packet;
 						return nullptr;
@@ -167,7 +166,7 @@ namespace RTC
 					// Ensure attribute length is 8 bytes.
 					if (attrLength != 8)
 					{
-						MS_WARN_TAG(ice, "attribute ICE-CONTROLLING must be 8 bytes length, packet discarded");
+						ELOG_DEBUG( "attribute ICE-CONTROLLING must be 8 bytes length, packet discarded");
 
 						delete packet;
 						return nullptr;
@@ -183,7 +182,7 @@ namespace RTC
 					// Ensure attribute length is 8 bytes.
 					if (attrLength != 8)
 					{
-						MS_WARN_TAG(ice, "attribute ICE-CONTROLLED must be 8 bytes length, packet discarded");
+						ELOG_DEBUG( "attribute ICE-CONTROLLED must be 8 bytes length, packet discarded");
 
 						delete packet;
 						return nullptr;
@@ -199,7 +198,7 @@ namespace RTC
 					// Ensure attribute length is 0 bytes.
 					if (attrLength != 0)
 					{
-						MS_WARN_TAG(ice, "attribute USE-CANDIDATE must be 0 bytes length, packet discarded");
+						ELOG_DEBUG( "attribute USE-CANDIDATE must be 0 bytes length, packet discarded");
 
 						delete packet;
 						return nullptr;
@@ -215,7 +214,7 @@ namespace RTC
 					// Ensure attribute length is 20 bytes.
 					if (attrLength != 20)
 					{
-						MS_WARN_TAG(ice, "attribute MESSAGE-INTEGRITY must be 20 bytes length, packet discarded");
+						ELOG_DEBUG( "attribute MESSAGE-INTEGRITY must be 20 bytes length, packet discarded");
 
 						delete packet;
 						return nullptr;
@@ -232,7 +231,7 @@ namespace RTC
 					// Ensure attribute length is 4 bytes.
 					if (attrLength != 4)
 					{
-						MS_WARN_TAG(ice, "attribute FINGERPRINT must be 4 bytes length, packet discarded");
+						ELOG_DEBUG( "attribute FINGERPRINT must be 4 bytes length, packet discarded");
 
 						delete packet;
 						return nullptr;
@@ -251,7 +250,7 @@ namespace RTC
 					// Ensure attribute length >= 4bytes.
 					if (attrLength < 4)
 					{
-						MS_WARN_TAG(ice, "attribute ERROR-CODE must be >= 4bytes length, packet discarded");
+						ELOG_DEBUG( "attribute ERROR-CODE must be >= 4bytes length, packet discarded");
 
 						delete packet;
 						return nullptr;
@@ -277,7 +276,7 @@ namespace RTC
 		// Ensure current position matches the total length.
 		if (pos != len)
 		{
-			MS_WARN_TAG(ice, "computed packet size does not match total size, packet discarded");
+			ELOG_DEBUG( "computed packet size does not match total size, packet discarded");
 
 			delete packet;
 			return nullptr;
@@ -293,8 +292,7 @@ namespace RTC
 			// Compare with the FINGERPRINT value in the packet.
 			if (fingerprint != computedFingerprint)
 			{
-				MS_WARN_TAG(
-				  ice,
+				ELOG_DEBUG(
 				  "computed FINGERPRINT value does not match the value in the packet, "
 				  "packet discarded");
 

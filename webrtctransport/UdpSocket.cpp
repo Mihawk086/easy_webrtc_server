@@ -10,24 +10,18 @@ UdpSocket::UdpSocket(std::string ip,int16_t port, xop::EventLoop* loop)
 	:m_loop(loop),m_strIP(ip),
 	m_port(port)
 {
-    m_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (!SocketUtil::bind(m_fd, ip.c_str(), port))
-    {
-        SocketUtil::close(m_fd);
-        std::cout << "create UdpSocket" << std::endl;
-    }
-    SocketUtil::setReuseAddr(m_fd);
-    SocketUtil::setReusePort(m_fd);
-    SocketUtil::setNonBlock(m_fd);
-    m_channel.reset(new xop::Channel(m_fd));
-    m_channel->setReadCallback([this]() { this->handleRead(); });
-    m_channel->enableReading();
-    loop->updateChannel(m_channel);
+   
 }
 
 
 UdpSocket::~UdpSocket()
 {
+    SOCKET fd = m_channel->fd();
+    if (fd > 0)
+    {
+        SocketUtil::close(fd);
+        m_loop->removeChannel(m_channel);
+    }
 }
 
 int UdpSocket::Send(char * buf, int len, const sockaddr_in & remoteAddr)
@@ -57,5 +51,17 @@ void UdpSocket::handleRead()
 }
 
 void UdpSocket::Start() {
-
+    m_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (!SocketUtil::bind(m_fd, m_strIP.c_str(), m_port))
+    {
+        SocketUtil::close(m_fd);
+        std::cout << "create UdpSocket" << std::endl;
+    }
+    SocketUtil::setReuseAddr(m_fd);
+    SocketUtil::setReusePort(m_fd);
+    SocketUtil::setNonBlock(m_fd);
+    m_channel.reset(new xop::Channel(m_fd));
+    m_channel->setReadCallback([this]() { this->handleRead(); });
+    m_channel->enableReading();
+    m_loop->updateChannel(m_channel);
 }

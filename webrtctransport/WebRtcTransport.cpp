@@ -7,10 +7,10 @@
 
 using namespace erizo;
 
-WebRtcTransport::WebRtcTransport(xop::EventLoop *loop)
+WebRtcTransport::WebRtcTransport(xop::EventLoop *loop,std::string strIP,int16_t nPort)
         :m_loop(loop),m_bReady(false){
-    m_strIP = "192.168.127.128";
-    m_nPort = 9500;
+    m_strIP = strIP;
+    m_nPort = nPort;
     m_pDtlsTransport.reset(new MyDtlsTransport(true));
     m_pUdpSocket.reset(new UdpSocket(m_strIP,m_nPort,loop));
     m_Srtp.reset(new SrtpChannel());
@@ -40,7 +40,7 @@ WebRtcTransport::~WebRtcTransport() {
 }
 
 void WebRtcTransport::Start() {
- 
+    m_pUdpSocket->Start();
 }
 
 std::string WebRtcTransport::GetLocalSdp() {
@@ -111,7 +111,9 @@ void WebRtcTransport::WritRtpPacket(char *buf, int len) {
 
 void WebRtcTransport::WriteH264Frame(char* buf, int len, uint32_t timestamp)
 {
-    m_rtpmaker.InputH264Frame(buf, len, timestamp);
+    if (m_bReady) {
+        m_rtpmaker.InputH264Frame(buf, len, timestamp);
+    }
 }
 
 

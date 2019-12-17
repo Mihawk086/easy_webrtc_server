@@ -29,7 +29,7 @@ FFmpegSrc::~FFmpegSrc()
 {
 }
 
-void FFmpegSrc::inputH264(char* pcData, int iDataLen, uint32_t timestamp)
+void FFmpegSrc::InputH264(char* pcData, int iDataLen, uint32_t timestamp)
 {	
 	int prefixeSize;
 	if (memcmp("\x00\x00\x00\x01", pcData, 4) == 0) {
@@ -251,11 +251,11 @@ void FFmpegSrc::ThreadEntry()
 						}
 						int sps_size = pps - sps - 4;
 						int pps_size = extraDatasize - sps_size - 8;
-						inputH264((char*)sps,sps_size, timestamp);
-						inputH264((char*)pps, pps_size, timestamp);
-						inputH264((char*)pkt->data, pkt->size, timestamp);
+						InputH264((char*)sps,sps_size, timestamp);
+						InputH264((char*)pps, pps_size, timestamp);
+						InputH264((char*)pkt->data, pkt->size, timestamp);
 					}else{
-						inputH264((char*)pkt->data, pkt->size, timestamp);
+						InputH264((char*)pkt->data, pkt->size, timestamp);
 					}
 				}
 			}

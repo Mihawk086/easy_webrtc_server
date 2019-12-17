@@ -15,6 +15,7 @@
 namespace erizo {
 
     class MyDtlsTransport : dtls::DtlsReceiver{
+        DECLARE_LOGGER();
     public:
         typedef std::shared_ptr<MyDtlsTransport>  Ptr ;
 
