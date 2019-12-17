@@ -15,13 +15,14 @@ class UdpSocket
 public:
     typedef std::shared_ptr<UdpSocket> Ptr;
 
-	UdpSocket(std::string ip,int16_t port, xop::EventLoop* loop);
+	UdpSocket(std::string ip, xop::EventLoop* loop);
 	~UdpSocket();
 	void Start();
 	int Send(char* buf,int len,  const struct sockaddr_in& remoteAddr);
 	void setReadCallback(UDPSOCKETREADCB cb) {
 		m_ReadCB = cb;
 	}
+	int16_t GetPort() { return m_port; }
 private:
 	void handleRead();
 	SOCKET m_fd;

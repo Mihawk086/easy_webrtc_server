@@ -1,14 +1,13 @@
 #include "UdpSocket.h"
-
+#include "PortManager.h"
 #include <iostream>
 using namespace xop;
 
 #define BUFF_SIZE 5000
 static char s_buf[BUFF_SIZE];
 
-UdpSocket::UdpSocket(std::string ip,int16_t port, xop::EventLoop* loop)
-	:m_loop(loop),m_strIP(ip),
-	m_port(port)
+UdpSocket::UdpSocket(std::string ip, xop::EventLoop* loop)
+	:m_loop(loop),m_strIP(ip)
 {
    
 }
@@ -22,6 +21,7 @@ UdpSocket::~UdpSocket()
         SocketUtil::close(fd);
         m_loop->removeChannel(m_channel);
     }
+    PortManager::GetInstance()->DelPort(m_port);
 }
 
 int UdpSocket::Send(char * buf, int len, const sockaddr_in & remoteAddr)
@@ -52,11 +52,14 @@ void UdpSocket::handleRead()
 
 void UdpSocket::Start() {
     m_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-    if (!SocketUtil::bind(m_fd, m_strIP.c_str(), m_port))
+    int16_t nPort = 0;
+    nPort = PortManager::GetInstance()->GetPort();
+    if (!SocketUtil::bind(m_fd, m_strIP.c_str(), nPort))
     {
         SocketUtil::close(m_fd);
         std::cout << "create UdpSocket" << std::endl;
     }
+    m_port = nPort;
     SocketUtil::setReuseAddr(m_fd);
     SocketUtil::setReusePort(m_fd);
     SocketUtil::setNonBlock(m_fd);

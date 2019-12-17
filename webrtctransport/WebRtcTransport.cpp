@@ -7,12 +7,11 @@
 
 using namespace erizo;
 
-WebRtcTransport::WebRtcTransport(xop::EventLoop *loop,std::string strIP,int16_t nPort)
+WebRtcTransport::WebRtcTransport(xop::EventLoop *loop,std::string strIP)
         :m_loop(loop),m_bReady(false){
     m_strIP = strIP;
-    m_nPort = nPort;
     m_pDtlsTransport.reset(new MyDtlsTransport(true));
-    m_pUdpSocket.reset(new UdpSocket(m_strIP,m_nPort,loop));
+    m_pUdpSocket.reset(new UdpSocket(m_strIP,loop));
     m_Srtp.reset(new SrtpChannel());
     m_IceServer.reset(new IceServer(Utils::Crypto::GetRandomString(4), Utils::Crypto::GetRandomString(24)));
     m_pUdpSocket->setReadCallback([this](char* buf, int len, struct sockaddr_in* remoteAddr){
@@ -61,7 +60,7 @@ std::string WebRtcTransport::GetLocalSdp() {
             m_IceServer->GetUsernameFragment().c_str(), m_IceServer->GetPassword().c_str(),
             m_pDtlsTransport->GetMyFingerprint().c_str(),
             nssrc, nssrc, nssrc, nssrc,
-            "4", 12345678, m_strIP.c_str(), m_nPort,
+            "4", 12345678, m_strIP.c_str(), m_pUdpSocket->GetPort(),
             "host"
     );
     return std::string(szsdp);
