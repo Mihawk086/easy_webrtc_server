@@ -28,6 +28,7 @@ public:
     static int getPeerAddr(SOCKET sockfd, struct sockaddr_in *addr);
     static void close(SOCKET sockfd);
     static bool connect(SOCKET sockfd, std::string ip, uint16_t port, int timeout=0);
+    static uint16_t get_local_port(int fd);
 };
 
 }

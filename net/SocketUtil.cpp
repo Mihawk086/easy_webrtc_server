@@ -181,3 +181,16 @@ bool SocketUtil::connect(SOCKET sockfd, std::string ip, uint16_t port, int timeo
 	return isConnected;
 }
 
+uint16_t SocketUtil::get_local_port(int fd) {
+    struct sockaddr addr;
+    struct sockaddr_in* addr_v4;
+    socklen_t addr_len = sizeof(addr);
+    //获取remote ip and port
+    if (0 == getsockname(fd, &addr, &addr_len)) {
+        if (addr.sa_family == AF_INET) {
+            addr_v4 = (sockaddr_in*)&addr;
+            return ntohs(addr_v4->sin_port);
+        }
+    }
+    return 0;
+}

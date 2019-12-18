@@ -11,7 +11,7 @@ namespace Utils {
 		case AF_INET:
 		{
 	
-
+			ip = inet_ntoa(reinterpret_cast<const struct sockaddr_in*>(addr)->sin_addr);
 			port = static_cast<uint16_t>(ntohs(reinterpret_cast<const struct sockaddr_in*>(addr)->sin_port));
 
 			break;
@@ -20,7 +20,7 @@ namespace Utils {
 		case AF_INET6:
 		{
 
-
+			
 			port = static_cast<uint16_t>(ntohs(reinterpret_cast<const struct sockaddr_in6*>(addr)->sin6_port));
 
 			break;
