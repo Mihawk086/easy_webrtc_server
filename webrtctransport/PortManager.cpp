@@ -21,11 +21,11 @@ PortManager::~PortManager()
 	
 }
 
-int16_t PortManager::GetPort()
+uint16_t PortManager::GetPort()
 {
 	int16_t port = -1;
 	std::lock_guard<std::mutex> lock(m_mutex);
-	for (int i = m_nIndex; ; ) {
+	for (uint16_t i = m_nIndex; ; ) {
 		if (!m_vecPorts[i]) {
 			port = MIN_PORT + i;
 			m_vecPorts[i] = true;
@@ -45,7 +45,7 @@ int16_t PortManager::GetPort()
 	return port;
 }
 
-void PortManager::DelPort(int16_t nPort)
+void PortManager::DelPort(uint16_t nPort)
 {
 	std::lock_guard<std::mutex> lock(m_mutex);
 	if (nPort>= MIN_PORT && nPort <= MAX_PORT) {

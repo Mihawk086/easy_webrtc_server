@@ -52,7 +52,7 @@ void UdpSocket::handleRead()
 
 void UdpSocket::Start() {
     m_fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-    int16_t nPort = 0;
+    uint16_t nPort = 0;
     nPort = PortManager::GetInstance()->GetPort();
     if (!SocketUtil::bind(m_fd, m_strIP.c_str(), nPort))
     {

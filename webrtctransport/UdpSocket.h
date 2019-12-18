@@ -22,11 +22,11 @@ public:
 	void setReadCallback(UDPSOCKETREADCB cb) {
 		m_ReadCB = cb;
 	}
-	int16_t GetPort() { return m_port; }
+	uint16_t GetPort() { return m_port; }
 private:
 	void handleRead();
 	SOCKET m_fd;
-	int16_t m_port;
+	uint16_t m_port;
 	std::string m_strIP;
 	std::string m_strIpAddr;
 	std::shared_ptr<xop::Channel> m_channel;
