@@ -37,7 +37,7 @@ class SignalSesssion :public std::enable_shared_from_this<SignalSesssion>{
 public:
 
     SignalSesssion(boost::asio::io_service* ptr_io_service,SignalServer* server,connection_hdl hdl);
-
+    ~SignalSesssion();
     void on_Open();
     void on_Close();
     void on_Message(websocket_server::message_ptr msg);

@@ -22,6 +22,10 @@ SignalSesssion::SignalSesssion(boost::asio::io_service *ptr_io_service ,SignalSe
 {
 }
 
+SignalSesssion::~SignalSesssion()
+{
+}
+
 void SignalSesssion::on_Open() {
 
     m_webrtctransport.reset(new WebRtcTransport(MyLoop::GetLoop(),xop::NetInterface::getLocalIPAddress()));

@@ -36,6 +36,12 @@ void SignalServer::onOpen(connection_hdl con) {
 void SignalServer::onClose(connection_hdl hdl) {
     auto ptr = GetSessionFromhdl(hdl);
     ptr->on_Close();
+    auto iter = m_mapClients.find(hdl);
+    if (iter == m_mapClients.end()) {
+    }
+    else {
+        m_mapClients.erase(iter);
+    }
 }
 
 void SignalServer::onMessage(connection_hdl hdl, websocket_server::message_ptr msg) {
