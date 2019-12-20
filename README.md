@@ -7,6 +7,7 @@ sudo apt install libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev 
 sudo apt-get install libboost-all-dev  
 ```  
 # 目录说明
+* http 基于boost的简单http库
 * dtls 封装openssl  
 * net  一个类似muduo网络库  
 * rapidjson 腾讯json库，解析json用  
@@ -26,7 +27,7 @@ make
 ```  
 运行程序   
 修改webrtchtml/js/main.js下websocket的ip地址   
-打开webrtchtml/index.html 播放视频   
+打开webrtchtml/index.html 播放视频 
 
 # 原理说明
 * 类似muduo网络库封装一个udpsocket；  
