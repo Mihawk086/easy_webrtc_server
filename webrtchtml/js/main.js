@@ -22,7 +22,7 @@ btn3.disabled = true;
 
 
 var pc2 = null;
-var conn = null;
+var xmlhttp = null;
 
 function start() {
   btn1.disabled = true;  
@@ -32,27 +32,31 @@ function start() {
   var servers = null;  
   pc2 = new RTCPeerConnection(servers);
   trace('Created remote peer connection object pc2');
-  pc2.onicecandidate = iceCallback2;
+  pc2.onicecandidate = iceCallback;
   pc2.onaddstream = gotRemoteStream;
   
-  if (window["WebSocket"]) 
-  {
-    		//var addr = "ws://" + location.host + ":9002" + "/wsasd";
-    var addr = "ws://" + "192.168.223.128" + ":3000";
-        conn = new WebSocket(addr);
-        conn.onclose = function(evt) 
-        {
-            trace('websocket close')
-        }
-        conn.onmessage = function(evt) 
-        {        		
-            gotoffer(evt.data)
-        }
-  }
-  else 
-  {
-       alert('Your browser does not support WebSocket')
-  }
+    if (window.XMLHttpRequest)
+    {
+	    //  IE7+, Firefox, Chrome, Opera, Safari ä¯ÀÀÆ÷Ö´ÐÐ´úÂë
+	    xmlhttp=new XMLHttpRequest();
+    }
+    else
+    {   
+	    // IE6, IE5 ä¯ÀÀÆ÷Ö´ÐÐ´úÂë
+	    xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+    }
+    var addr = "http://" + "192.168.127.128" + ":8000" + "/webrtc";
+
+    xmlhttp.onreadystatechange=function()
+    {
+	    if (xmlhttp.readyState==4 && xmlhttp.status==200)
+	    {
+        var res = xmlhttp.responseText;
+		    gotoffer(res);
+	    }
+    }
+    xmlhttp.open("GET",addr,true);
+    xmlhttp.send(); 
     
 }
 
@@ -103,23 +107,9 @@ function gotDescription2(desc) {
   );
   trace('Pranswer from pc2 \n' + desc.sdp);
   
-  
-  conn.send(JSON.stringify(desc));
+  //conn.send(JSON.stringify(desc));
   // send desc.sdp to server
 }
-
-function gotDescription3(desc) {
-  // Final answer, setting a=recvonly & sdp type to answer.
-  desc.sdp = desc.sdp.replace(/a=inactive/g, 'a=recvonly');
-  desc.type = 'answer';
-  pc2.setLocalDescription(desc).then(
-    onSetLocalDescriptionSuccess,
-    onSetLocalDescriptionError
-  );
-  trace('Answer from pc2 \n' + desc.sdp);
-  pc1.setRemoteDescription(desc);
-}
-
 
 function stop() {
   trace('Ending Call' + '\n\n');  
@@ -132,10 +122,10 @@ function gotRemoteStream(e) {
   trace('Received remote stream');
 }
 
-function iceCallback2(event) {
+function iceCallback(event) {
   if (event.candidate) {    
     trace('Remote ICE candidate: \n ' + event.candidate.candidate);    
-    conn.send(JSON.stringify(event.candidate));
+    //conn.send(JSON.stringify(event.candidate));
   }
   else {
     // All ICE candidates have been sent

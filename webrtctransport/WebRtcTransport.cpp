@@ -1,36 +1,37 @@
-//
-// Created by xueyuegui on 19-12-7.
-//
-
 #include "WebRtcTransport.h"
 #include "Utils.hpp"
+#include "muduo/net/EventLoop.h"
+
+#include <iostream>
 
 using namespace erizo;
 
-WebRtcTransport::WebRtcTransport(xop::EventLoop *loop,std::string strIP)
-        :m_loop(loop),m_bReady(false){
+
+WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string strIP)
+    :m_MuduoLoop(m_MuduoLoop), m_bReady(false)
+{
     m_strIP = strIP;
     m_pDtlsTransport.reset(new MyDtlsTransport(true));
-    m_pUdpSocket.reset(new UdpSocket(m_strIP,loop));
+    m_pMuduoUdpSocket.reset(new MuduoUdpSocket(m_strIP, loop));
     m_Srtp.reset(new SrtpChannel());
     m_IceServer.reset(new IceServer(Utils::Crypto::GetRandomString(4), Utils::Crypto::GetRandomString(24)));
-    m_pUdpSocket->setReadCallback([this](char* buf, int len, struct sockaddr_in* remoteAddr){
-        this->onInputDataPacket(buf,len,remoteAddr);
-    });
-    m_IceServer->SetIceServerCompletedCB([this](){
+    m_pMuduoUdpSocket->setReadCallback([this](char* buf, int len, struct sockaddr_in* remoteAddr) {
+        this->onInputDataPacket(buf, len, remoteAddr);
+        });
+    m_IceServer->SetIceServerCompletedCB([this]() {
         this->OnIceServerCompleted();
-    });
+        });
     m_IceServer->SetSendCB([this](char* buf, int len, struct sockaddr_in* remoteAddr) {
-        this->WritePacket(buf, len,remoteAddr);
-    });
-    m_pDtlsTransport->SetHandshakeCompletedCB([this](std::string clientKey, std::string serverKey){
-        this->OnDtlsCompleted(clientKey,serverKey);
-    });
-    m_pDtlsTransport->SetOutPutCB([this](char* buf ,int len){
-        this->WritePacket(buf,len);
-    });
-    m_rtpmaker.SetRtpCallBack([this](char* buf ,int len) {
-        this->WritRtpPacket(buf,len);
+        this->WritePacket(buf, len, remoteAddr);
+        });
+    m_pDtlsTransport->SetHandshakeCompletedCB([this](std::string clientKey, std::string serverKey) {
+        this->OnDtlsCompleted(clientKey, serverKey);
+        });
+    m_pDtlsTransport->SetOutPutCB([this](char* buf, int len) {
+        this->WritePacket(buf, len);
+        });
+    m_rtpmaker.SetRtpCallBack([this](char* buf, int len) {
+        this->WritRtpPacket(buf, len);
         });
 }
 
@@ -39,12 +40,18 @@ WebRtcTransport::~WebRtcTransport() {
 }
 
 void WebRtcTransport::Start() {
-    m_pUdpSocket->Start();
+    if (m_pMuduoUdpSocket) {
+        m_pMuduoUdpSocket->Start();
+    }
 }
 
 std::string WebRtcTransport::GetLocalSdp() {
     char szsdp[1024 * 10] = { 0 };
     int nssrc = 12345678;
+    uint16_t nport = 0;
+    if (m_pMuduoUdpSocket) {
+        nport = m_pMuduoUdpSocket->GetPort();
+    }
     sprintf(szsdp, "v=0\r\no=- 1495799811084970 1495799811084970 IN IP4 %s\r\ns=Streaming Test\r\nt=0 0\r\n"
                    "a=group:BUNDLE video\r\na=msid-semantic: WMS janus\r\n"
                    "m=video 1 RTP/SAVPF 96\r\nc=IN IP4 %s\r\na=mid:video\r\na=sendonly\r\na=rtcp-mux\r\n"
@@ -60,7 +67,7 @@ std::string WebRtcTransport::GetLocalSdp() {
             m_IceServer->GetUsernameFragment().c_str(), m_IceServer->GetPassword().c_str(),
             m_pDtlsTransport->GetMyFingerprint().c_str(),
             nssrc, nssrc, nssrc, nssrc,
-            "4", 12345678, m_strIP.c_str(), m_pUdpSocket->GetPort(),
+            "4", 12345678, m_strIP.c_str(), nport,
             "host"
     );
     return std::string(szsdp);
@@ -92,11 +99,15 @@ void WebRtcTransport::onInputDataPacket(char *buf, int len, struct sockaddr_in *
 }
 
 void WebRtcTransport::WritePacket(char *buf, int len, struct sockaddr_in *remoteAddr) {
-    m_pUdpSocket->Send(buf,len,*remoteAddr);
+    if(m_pMuduoUdpSocket){
+        m_pMuduoUdpSocket->Send(buf, len, *remoteAddr);
+    }
 }
 
 void WebRtcTransport::WritePacket(char *buf, int len) {
-    m_pUdpSocket->Send(buf,len,m_RemoteSockaddr);
+    if (m_pMuduoUdpSocket) {
+        m_pMuduoUdpSocket->Send(buf, len, m_RemoteSockaddr);
+    }
 }
 
 void WebRtcTransport::WritRtpPacket(char *buf, int len) {
@@ -104,7 +115,9 @@ void WebRtcTransport::WritRtpPacket(char *buf, int len) {
         memcpy(m_ProtectBuf, buf, len);
         int length = len;
         m_Srtp->protectRtp(m_ProtectBuf, &length);
-        m_pUdpSocket->Send(m_ProtectBuf, length, m_RemoteSockaddr);
+        if (m_pMuduoUdpSocket) {
+            m_pMuduoUdpSocket->Send(m_ProtectBuf, length, m_RemoteSockaddr);
+        }
     }
 }
 

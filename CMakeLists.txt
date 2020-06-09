@@ -5,11 +5,11 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include)
 
 link_libraries(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib)
 
-file(GLOB SRC_LIST ./dtls/*.cpp ./dtls/*.c ./net/*.cpp ./xop/*.cpp ./webrtctransport/*.cpp ./http/*.cpp)
+file(GLOB SRC_LIST ./dtls/*.cpp ./dtls/*.c ./webrtctransport/*.cpp)
 
 add_library(webrtc ${SRC_LIST})
 
-file(GLOB EXAMPLE_LIST ./example/*.cpp)
+file(GLOB EXAMPLE_LIST ./main/*.cpp)
 
 find_package(Boost REQUIRED COMPONENTS regex filesystem thread system)
 
@@ -21,4 +21,4 @@ set(LINK_LIBRARYS  ${Boost_LIBRARIES} ${LOG}
 
 add_executable(testWebrtc ${EXAMPLE_LIST})
 
-target_link_libraries(testWebrtc webrtc  avcodec avfilter avutil ${LINK_LIBRARYS})
+target_link_libraries(testWebrtc webrtc  avcodec avfilter avutil muduo_http muduo_net muduo_base ${LINK_LIBRARYS})
