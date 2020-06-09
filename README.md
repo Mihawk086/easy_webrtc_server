@@ -6,6 +6,7 @@
 sudo apt-get install liblog4cxx-dev  
 sudo apt install libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavresample-dev libavutil-dev libpostproc-dev   libswresample-dev libswscale-dev  
 sudo apt-get install libboost-all-dev  
+muduo网络库：https://github.com/chenshuo/muduo
 ```  
 # 目录说明
 * dtls 封装openssl  
@@ -23,9 +24,8 @@ cd build
 cmake ..  
 make  
 ```  
-运行程序   
-修改webrtchtml/js/main.js下http的ip地址   
-打开webrtchtml/index.html 播放视频 
+运行程序，第一个参数为IP地址 ./testwebrtc IP地址   
+打开webrtchtml/index.html 输入IP地址，播放视频 
 
 # 原理说明
 * muduo不支持udp，本项目基于muduo的Channel类简单封装一个UDP通信的类；  

@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     EventLoop loop;
     HttpServer server(&loop, InetAddress(8000), "webrtc");
     //server.setHttpCallback(onRequest);
-    server.setHttpCallback([&loop](const HttpRequest& req,
+    server.setHttpCallback([&loop,&strIP](const HttpRequest& req,
         HttpResponse* resp)
         {
             if (req.path() == "/webrtc") {
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
                 resp->setStatusMessage("OK");
                 resp->setContentType("text/plain");
                 resp->addHeader("Access-Control-Allow-Origin", "*");
-                std::shared_ptr<WebRtcTransport> session(new WebRtcTransport(&loop, "192.168.127.128"));
+                std::shared_ptr<WebRtcTransport> session(new WebRtcTransport(&loop, strIP));
                 session->Start();
                 FFmpegSrc::GetInsatance()->AddClient(session);
                 s_WebRTCSession.insert(std::make_pair(s_sessionid,session));

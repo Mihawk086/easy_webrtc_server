@@ -12,6 +12,7 @@
 var vid2 = document.getElementById('vid2');
 var btn1 = document.getElementById('btn1');
 var btn3 = document.getElementById('btn3');
+var input1 = document.getElementById('input1');
 
 btn1.addEventListener('click', start);
 
@@ -29,7 +30,8 @@ function start() {
   btn3.disabled = false;
   trace('Starting Call');
   
-  var servers = null;  
+  var servers = null;
+  var IP = input1.value;
   pc2 = new RTCPeerConnection(servers);
   trace('Created remote peer connection object pc2');
   pc2.onicecandidate = iceCallback;
@@ -45,7 +47,7 @@ function start() {
 	    // IE6, IE5 ä¯ÀÀÆ÷Ö´ÐÐ´úÂë
 	    xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
     }
-    var addr = "http://" + "192.168.127.128" + ":8000" + "/webrtc";
+    var addr = "http://" + IP + ":8000" + "/webrtc";
 
     xmlhttp.onreadystatechange=function()
     {
