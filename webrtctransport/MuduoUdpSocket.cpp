@@ -23,9 +23,7 @@ MuduoUdpSocket::~MuduoUdpSocket()
 	if (fd > 0)
 	{
 		sockets::close(fd);
-        m_loop->queueInLoop([this](){
-            m_loop->removeChannel(m_channel.get());
-            });
+		m_loop->removeChannel(m_channel.get());
 	}
 }
 
@@ -50,12 +48,10 @@ void MuduoUdpSocket::Start()
         }
     }
     
-    m_loop->queueInLoop([this]() {
-        m_channel.reset(new Channel(m_loop, m_fd));
-        m_channel->setReadCallback([this](Timestamp time) { this->handleRead(); });
-        m_channel->enableReading();
-        m_loop->updateChannel(m_channel.get());
-        });
+    m_channel.reset(new Channel(m_loop,m_fd));
+    m_channel->setReadCallback([this](Timestamp time) { this->handleRead(); });
+    m_channel->enableReading();
+    m_loop->updateChannel(m_channel.get());
 }
 
 int MuduoUdpSocket::Send(char* buf, int len, const sockaddr_in& remoteAddr)

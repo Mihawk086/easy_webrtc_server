@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
     Utils::Crypto::ClassInit();
     dtls::DtlsSocketContext::Init();
 
-    int numThreads = 1;
+    int numThreads = 0;
     EventLoop loop;
     HttpServer server(&loop, InetAddress(8000), "webrtc");
     //server.setHttpCallback(onRequest);

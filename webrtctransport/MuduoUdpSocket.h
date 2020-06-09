@@ -10,7 +10,7 @@ namespace muduo {
 	}
 }
 typedef std::function<void(char* buf, int len, struct sockaddr_in* remoteAddr)> MUDUO_UDPSOCKET_READCB;
-class MuduoUdpSocket {
+class MuduoUdpSocket :public std::enable_shared_from_this<MuduoUdpSocket> {
 public:
 	typedef std::shared_ptr<MuduoUdpSocket> Ptr;
 	MuduoUdpSocket(std::string ip, muduo::net::EventLoop* loop);
