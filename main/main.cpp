@@ -42,11 +42,10 @@ int main(int argc, char* argv[])
                 resp->setContentType("text/plain");
                 resp->addHeader("Access-Control-Allow-Origin", "*");
                 std::shared_ptr<WebRtcTransport> session(new WebRtcTransport(&loop, strIP));
+                s_WebRTCSession.insert(std::make_pair(s_sessionid, session));
+                s_sessionid++;
                 session->Start();
                 FFmpegSrc::GetInsatance()->AddClient(session);
-                s_WebRTCSession.insert(std::make_pair(s_sessionid,session));
-                s_sessionid++;
-                s_WebRTCSession;
                 resp->setBody(session->GetLocalSdp());
             }
         });

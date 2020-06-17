@@ -9,9 +9,6 @@
 using namespace muduo;
 using namespace muduo::net;
 
-#define BUFF_SIZE 5000
-static char s_buf[BUFF_SIZE];
-
 MuduoUdpSocket::MuduoUdpSocket(std::string ip, EventLoop* loop)
 	:m_loop(loop), m_strIP(ip)
 {
@@ -73,8 +70,8 @@ void MuduoUdpSocket::handleRead()
 {
     struct sockaddr_in remoteAddr;
     unsigned int nAddrLen = sizeof(remoteAddr);
-    int recvLen = recvfrom(m_fd, s_buf, BUFF_SIZE, 0, (struct sockaddr*)&remoteAddr, &nAddrLen);
+    int recvLen = recvfrom(m_fd, m_buf, BUFF_SIZE, 0, (struct sockaddr*)&remoteAddr, &nAddrLen);
     if (m_ReadCB) {
-        m_ReadCB(s_buf, recvLen, &remoteAddr);
+        m_ReadCB(m_buf, recvLen, &remoteAddr);
     }
 }

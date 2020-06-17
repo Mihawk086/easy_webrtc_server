@@ -3,6 +3,8 @@
 #include <memory>
 #include <functional>
 
+#define BUFF_SIZE 5000
+
 namespace muduo {
 	namespace net {
 		class Channel;
@@ -30,4 +32,5 @@ private:
 	std::string m_strIpAddr;
 	std::shared_ptr<muduo::net::Channel> m_channel;
 	muduo::net::EventLoop* m_loop;
+	char m_buf[BUFF_SIZE];
 };
