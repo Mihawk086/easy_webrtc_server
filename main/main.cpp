@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
 
     int numThreads = 0;
     EventLoop loop;
-    HttpServer server(&loop, InetAddress(8000), "webrtc");
+    HttpServer server(&loop, InetAddress(8000), "webrtc",TcpServer::kReusePort);
     //server.setHttpCallback(onRequest);
     server.setHttpCallback([&loop,&strIP](const HttpRequest& req,
         HttpResponse* resp)
@@ -45,6 +45,7 @@ int main(int argc, char* argv[])
                 s_WebRTCSession.insert(std::make_pair(s_sessionid, session));
                 s_sessionid++;
                 session->Start();
+                
                 FFmpegSrc::GetInsatance()->AddClient(session);
                 resp->setBody(session->GetLocalSdp());
             }
