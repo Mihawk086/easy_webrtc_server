@@ -10,8 +10,6 @@
 
 namespace RTC {
 
-DEFINE_LOGGER(StunPacket, "StunPacket");
-
 /* Class variables. */
 
 const uint8_t StunPacket::magicCookie[] = {0x21, 0x12, 0xA4, 0x42};

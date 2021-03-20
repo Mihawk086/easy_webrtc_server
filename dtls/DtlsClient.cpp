@@ -10,8 +10,6 @@ extern "C" {
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 
-#include <boost/lexical_cast.hpp>
-#include <boost/thread.hpp>
 #include <mutex>   // NOLINT
 #include <thread>  // NOLINT
 
@@ -21,6 +19,7 @@ extern "C" {
 #include <cstring>
 #include <iostream>
 #include <string>
+#include <sstream>
 
 #include "./DtlsSocket.h"
 #include "./bf_dwrap.h"
@@ -37,9 +36,6 @@ EVP_PKEY* DtlsSocketContext::privkey = nullptr;
 static const int KEY_LENGTH = 1024;
 
 static std::mutex* array_mutex;
-
-DEFINE_LOGGER(DtlsSocketContext, "dtls.DtlsSocketContext");
-log4cxx::LoggerPtr sslLogger(log4cxx::Logger::getLogger("dtls.SSL"));
 
 static void ssl_lock_callback(int mode, int type, const char* file, int line) {
   if (mode & CRYPTO_LOCK) {
@@ -192,7 +188,8 @@ int createCert(const std::string& pAor, int expireDays, int keyLen, X509*& outCe
 
   // set version to X509v3 (starts from 0)
   // X509_set_version(cert, 0L);
-  std::string thread_id = boost::lexical_cast<std::string>(boost::this_thread::get_id());
+  //std::string thread_id = ::boostlexical_cast<std::string>(boost::this_thread::get_id());
+  std::string thread_id;
   unsigned int thread_number = 0;
   sscanf(thread_id.c_str(), "%x", &thread_number);
 

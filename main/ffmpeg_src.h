@@ -11,15 +11,15 @@ class FFmpegSrc {
  public:
   static FFmpegSrc* GetInsatance();
   ~FFmpegSrc();
-  void InputH264(char* pcData, int iDataLen, uint32_t timestamp);
+  void InputH264(char* data, int len, uint32_t timestamp);
   void Start();
   void Stop();
   void ThreadEntry();
-  void AddClient(std::weak_ptr<WebRtcTransport> client);
+  void AddClient(std::weak_ptr<WebRtcTransport>);
 
  private:
   FFmpegSrc();
-  std::shared_ptr<std::thread> m_pThread;
-  std::atomic<bool> m_bStart;
-  std::list<std::weak_ptr<WebRtcTransport>> m_clients;
+  std::shared_ptr<std::thread> thread_;
+  std::atomic<bool> is_start_;
+  std::list<std::weak_ptr<WebRtcTransport>> clients_;
 };

@@ -3,9 +3,7 @@
 联系方式：qq864733526
 # 依赖库
 ```  
-sudo apt-get install liblog4cxx-dev  
-sudo apt install libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavresample-dev libavutil-dev libpostproc-dev   libswresample-dev libswscale-dev  
-sudo apt-get install libboost-all-dev  
+sudo apt install libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavresample-dev libavutil-dev libpostproc-dev   libswresample-dev libswscale-dev    
 muduo网络库：https://github.com/chenshuo/muduo
 ```  
 # 目录说明

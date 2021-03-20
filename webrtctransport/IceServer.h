@@ -4,13 +4,11 @@
 #include <memory>
 
 #include "StunPacket.hpp"
-#include "logger.h"
+#include "log/logger.h"
 
 typedef std::function<void(char* buf, int len, struct sockaddr_in* remoteAddr)> UdpSendCallback;
 
 class IceServer {
-  DECLARE_LOGGER();
-
  public:
   enum class IceState { NEW = 1, CONNECTED, COMPLETED, DISCONNECTED };
   typedef std::shared_ptr<IceServer> Ptr;

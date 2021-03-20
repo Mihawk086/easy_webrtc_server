@@ -8,11 +8,11 @@
 #include <netinet/in.h>
 #include <srtp2/srtp.h>
 
-#include <boost/thread/mutex.hpp>
+#include <mutex>
 #include <string>
 
 #include "RtpHeaders.h"
-#include "logger.h"
+#include "log/logger.h"
 
 namespace erizo {
 
@@ -21,9 +21,8 @@ namespace erizo {
  * Represents a SRTP Channel with keys for protecting and unprotecting RTP and RTCP data.
  */
 class SrtpChannel {
-  DECLARE_LOGGER();
   static bool initialized;
-  static boost::mutex sessionMutex_;
+  static std::mutex sessionMutex_;
 
  public:
   /**

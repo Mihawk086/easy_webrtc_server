@@ -9,12 +9,15 @@
 #include <openssl/evp.h>
 #include <srtp2/srtp.h>
 
+#include "string.h"
+
+#include <mutex>
 #include <string>
 
 namespace erizo {
-DEFINE_LOGGER(SrtpChannel, "SrtpChannel");
+
 bool SrtpChannel::initialized = false;
-boost::mutex SrtpChannel::sessionMutex_;
+std::mutex SrtpChannel::sessionMutex_;
 
 constexpr int kKeyStringLength = 32;
 
@@ -42,7 +45,7 @@ std::string octet_string_hex_string(const void *s, int length) {
 }
 
 SrtpChannel::SrtpChannel() {
-  boost::mutex::scoped_lock lock(SrtpChannel::sessionMutex_);
+  std::lock_guard<std::mutex> lock(SrtpChannel::sessionMutex_);
   if (SrtpChannel::initialized != true) {
     int res = srtp_init();
     ELOG_DEBUG("Initialized SRTP library %d", res);

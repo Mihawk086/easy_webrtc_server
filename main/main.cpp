@@ -1,8 +1,8 @@
 #include <iostream>
 #include <map>
 
-#include "FFmpegSrc.h"
 #include "dtls/DtlsSocket.h"
+#include "main/ffmpeg_src.h"
 #include "muduo/base/Logging.h"
 #include "muduo/net/EventLoop.h"
 #include "muduo/net/http/HttpRequest.h"
@@ -18,7 +18,7 @@ static std::map<int, std::shared_ptr<WebRtcTransport>> s_WebRTCSession;
 static int s_sessionid = 1;
 
 int main(int argc, char* argv[]) {
-  std::string strIP = "192.168.127.128";
+  std::string strIP = "192.168.2.131";
   if (argc > 1) {
     strIP = argv[1];
   }
@@ -42,6 +42,7 @@ int main(int argc, char* argv[]) {
 
       FFmpegSrc::GetInsatance()->AddClient(session);
       resp->setBody(session->GetLocalSdp());
+      std::cout << session->GetLocalSdp() << std::endl;
     }
   });
   server.setThreadNum(threads_num);

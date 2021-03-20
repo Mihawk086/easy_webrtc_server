@@ -1,4 +1,4 @@
-#include "FFmpegSrc.h"
+#include "ffmpeg_src.h"
 
 #include "webrtctransport/WebRtcTransport.h"
 
@@ -14,7 +14,7 @@ extern "C" {
 
 #include <iostream>
 
-FFmpegSrc::FFmpegSrc() { m_bStart.store(false); }
+FFmpegSrc::FFmpegSrc() { is_start_.store(false); }
 
 FFmpegSrc *FFmpegSrc::GetInsatance() {
   static FFmpegSrc g_src;
@@ -23,36 +23,35 @@ FFmpegSrc *FFmpegSrc::GetInsatance() {
 
 FFmpegSrc::~FFmpegSrc() {}
 
-void FFmpegSrc::InputH264(char *pcData, int iDataLen, uint32_t timestamp) {
+void FFmpegSrc::InputH264(char *data, int len, uint32_t timestamp) {
   int prefixeSize;
-  if (memcmp("\x00\x00\x00\x01", pcData, 4) == 0) {
+  if (memcmp("\x00\x00\x00\x01", data, 4) == 0) {
     prefixeSize = 4;
-  } else if (memcmp("\x00\x00\x01", pcData, 3) == 0) {
+  } else if (memcmp("\x00\x00\x01", data, 3) == 0) {
     prefixeSize = 3;
   } else {
     prefixeSize = 0;
   }
-  pcData = pcData + prefixeSize;
-  iDataLen = iDataLen - prefixeSize;
-  for (auto it = m_clients.begin(); it != m_clients.end(); it++) {
+  data = data + prefixeSize;
+  len = len - prefixeSize;
+  for (auto it = clients_.begin(); it != clients_.end(); it++) {
     std::shared_ptr<WebRtcTransport> client = it->lock();
     if (client) {
-      client->WriteH264Frame((char *)pcData, iDataLen, timestamp);
+      client->WriteH264Frame((char *)data, len, timestamp);
     } else {
-      it = m_clients.erase(it);
+      it = clients_.erase(it);
     }
   }
 }
 
 void FFmpegSrc::Start() {
-  m_bStart.store(true);
-  m_pThread.reset(new std::thread([this]() { ThreadEntry(); }));
+  is_start_.store(true);
+  thread_.reset(new std::thread([this]() { ThreadEntry(); }));
 }
 
-void FFmpegSrc::Stop() { m_bStart.store(false); }
+void FFmpegSrc::Stop() { is_start_.store(false); }
 
 void FFmpegSrc::ThreadEntry() {
-  // av_register_all();
   avcodec_register_all();
   avfilter_register_all();
   av_log_set_level(AV_LOG_QUIET);
@@ -63,19 +62,19 @@ void FFmpegSrc::ThreadEntry() {
   std::atomic<int64_t> encode_count;
   encode_count.store(0);
 
-  AVCodec *pCodecH264 = NULL;
-  AVCodecContext *pCodeCtx = NULL;
+  AVCodec *codec_h264 = NULL;
+  AVCodecContext *codec_ctx = NULL;
 
-  pCodecH264 = avcodec_find_encoder(AV_CODEC_ID_H264);
-  if (!pCodecH264) {
+  codec_h264 = avcodec_find_encoder(AV_CODEC_ID_H264);
+  if (!codec_h264) {
     fprintf(stderr, "h264 codec not found\n");
     return;
   }
 
-  pCodeCtx = avcodec_alloc_context3(pCodecH264);
-  pCodeCtx->bit_rate = 300000;   // put sample parameters
-  pCodeCtx->width = in_width;    //
-  pCodeCtx->height = in_height;  //
+  codec_ctx = avcodec_alloc_context3(codec_h264);
+  codec_ctx->bit_rate = 300000;   // put sample parameters
+  codec_ctx->width = in_width;    //
+  codec_ctx->height = in_height;  //
 
   // frames per second
   AVRational rate;
@@ -84,23 +83,23 @@ void FFmpegSrc::ThreadEntry() {
   AVRational framerate;
   framerate.num = 25;
   framerate.den = 1;
-  pCodeCtx->time_base = rate;  //(AVRational){1,25};
-  pCodeCtx->gop_size = 25;     // emit one intra frame
-  pCodeCtx->framerate = framerate;
-  pCodeCtx->max_b_frames = 0;
-  pCodeCtx->thread_count = 1;
-  pCodeCtx->pix_fmt = AV_PIX_FMT_YUV420P;  // PIX_FMT_RGB24;
-  pCodeCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
-  av_opt_set(pCodeCtx->priv_data, "preset", "slow", 0);
-  av_opt_set(pCodeCtx->priv_data, "tune", "zerolatency", 0);
+  codec_ctx->time_base = rate;  //(AVRational){1,25};
+  codec_ctx->gop_size = 25;     // emit one intra frame
+  codec_ctx->framerate = framerate;
+  codec_ctx->max_b_frames = 0;
+  codec_ctx->thread_count = 1;
+  codec_ctx->pix_fmt = AV_PIX_FMT_YUV420P;  // PIX_FMT_RGB24;
+  codec_ctx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+  av_opt_set(codec_ctx->priv_data, "preset", "slow", 0);
+  av_opt_set(codec_ctx->priv_data, "tune", "zerolatency", 0);
 
   // av_opt_set(c->priv_data, /*"preset"*/"libvpx-1080p.ffpreset", /*"slow"*/NULL, 0);
-  if (avcodec_open2(pCodeCtx, pCodecH264, NULL) < 0) {
+  if (avcodec_open2(codec_ctx, codec_h264, NULL) < 0) {
     printf("avcodec_open2 error");
     return;
   }
   uint32_t timestamp = 0;
-  while (m_bStart.load()) {
+  while (is_start_.load()) {
     auto time1 = std::chrono::steady_clock::now();
     char sz_filter_descr[256] = {0};
     time_t lt = time(NULL);
@@ -108,8 +107,6 @@ void FFmpegSrc::ThreadEntry() {
     strftime(sz_filter_descr, 256,
              "drawtext=fontfile=simsunb.ttf:fontcolor=red:fontsize=50:text='osd %Y/%m/%d %H/%M/%S'",
              tm_ptr);
-    // strncpy(sz_filter_descr,filter_descr,256);
-
     char args[512];
     AVFilterContext *buffersink_ctx;
     AVFilterContext *buffersrc_ctx;
@@ -197,8 +194,8 @@ void FFmpegSrc::ThreadEntry() {
       if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) break;
       if (ret < 0) return;
       int u_size = 0;
-      avcodec_send_frame(pCodeCtx, frame_out);
-      u_size = avcodec_receive_packet(pCodeCtx, avpkt);
+      avcodec_send_frame(codec_ctx, frame_out);
+      u_size = avcodec_receive_packet(codec_ctx, avpkt);
 
       if (u_size == 0) {
         timestamp += 90 * 40;
@@ -206,8 +203,8 @@ void FFmpegSrc::ThreadEntry() {
         if (pkt && pkt->size != 0) {
           if (pkt->data[4] == 0x65)  // 0x67:sps ,0x65:IDR
           {
-            uint8_t *extraData = pCodeCtx->extradata;
-            uint8_t extraDatasize = pCodeCtx->extradata_size;
+            uint8_t *extraData = codec_ctx->extradata;
+            uint8_t extraDatasize = codec_ctx->extradata_size;
             uint8_t *sps = extraData + 4;
             uint8_t *pps = nullptr;
             for (uint8_t *p = sps; p < (extraData + extraDatasize - 4); p++) {
@@ -263,7 +260,7 @@ void FFmpegSrc::ThreadEntry() {
     encode_count++;
   }
 
-  avcodec_close(pCodeCtx);
+  avcodec_close(codec_ctx);
 }
 
-void FFmpegSrc::AddClient(std::weak_ptr<WebRtcTransport> client) { m_clients.push_back(client); }
+void FFmpegSrc::AddClient(std::weak_ptr<WebRtcTransport> client) { clients_.push_back(client); }

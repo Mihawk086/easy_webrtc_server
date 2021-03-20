@@ -3,3 +3,4 @@ out/
 .vscode
 build
 CMakeSettings.json
+bazel*

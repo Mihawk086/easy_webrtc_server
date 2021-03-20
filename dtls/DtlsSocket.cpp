@@ -15,8 +15,6 @@ using dtls::DtlsSocket;
 using dtls::SrtpSessionKeys;
 using std::memcpy;
 
-DEFINE_LOGGER(DtlsSocket, "dtls.DtlsSocket");
-
 int dummy_cb(int d, X509_STORE_CTX* x) { return 1; }
 
 DtlsSocket::DtlsSocket(DtlsSocketContext* socketContext, enum SocketType type)
@@ -113,7 +111,7 @@ void DtlsSocket::forceRetransmit() {
 }
 
 void DtlsSocket::doHandshakeIteration() {
-  boost::mutex::scoped_lock lock(handshakeMutex_);
+  std::lock_guard<std::mutex> lock(handshakeMutex_);
   char errbuf[1024];
   int sslerr;
 

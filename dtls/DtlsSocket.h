@@ -11,12 +11,11 @@ extern "C" {
 #include <openssl/rand.h>
 #include <openssl/ssl.h>
 
-#include <boost/shared_ptr.hpp>
-#include <boost/thread/mutex.hpp>
 #include <memory>
 #include <string>
+#include <mutex>
 
-#include "logger.h"
+#include "log/logger.h"
 
 const int SRTP_MASTER_KEY_KEY_LEN = 16;
 const int SRTP_MASTER_KEY_SALT_LEN = 14;
@@ -66,8 +65,6 @@ class SrtpSessionKeys {
 };
 
 class DtlsSocket {
-  DECLARE_LOGGER();
-
  public:
   enum SocketType { Client, Server };
   // Creates an SSL socket, and if client sets state to connect_state and
@@ -126,7 +123,7 @@ class DtlsSocket {
 
   SocketType mSocketType;
   bool mHandshakeCompleted;
-  boost::mutex handshakeMutex_;
+  std::mutex handshakeMutex_;
 };
 
 class DtlsReceiver {
@@ -139,8 +136,6 @@ class DtlsReceiver {
 };
 
 class DtlsSocketContext {
-  DECLARE_LOGGER();
-
  public:
   bool started;
   // memory is only valid for duration of callback; must be copied if queueing

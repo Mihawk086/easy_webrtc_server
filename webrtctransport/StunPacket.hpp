@@ -1,26 +1,15 @@
 #ifndef MS_RTC_STUN_PACKET_HPP
 #define MS_RTC_STUN_PACKET_HPP
 
-#include <string>
-#if defined(__linux) || defined(__linux__)
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#else
-#define WIN32_LEAN_AND_MEAN
-#define _WINSOCK_DEPRECATED_NO_WARNINGS
-#include <WinSock2.h>
-#include <iphlpapi.h>
-#include <windows.h>
-#include <ws2tcpip.h>
-#endif
+#include <string>
 
-#include "logger.h"
+#include "log/logger.h"
 
 namespace RTC {
 class StunPacket {
-  DECLARE_LOGGER();
-
  public:
   // STUN message class.
   enum class Class : uint16_t {

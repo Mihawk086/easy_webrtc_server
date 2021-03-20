@@ -5,8 +5,6 @@
 static constexpr size_t StunSerializeBufferSize{65536};
 static uint8_t StunSerializeBuffer[StunSerializeBufferSize];
 
-DEFINE_LOGGER(IceServer, "IceServer");
-
 IceServer::IceServer() {}
 IceServer::~IceServer() {}
 IceServer::IceServer(const std::string& usernameFragment, const std::string& password)
@@ -32,7 +30,6 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
       ELOG_WARN("ignoring STUN Indication or Response with unknown method %#.3x",
                 static_cast<unsigned int>(packet->GetMethod()));
     }
-
     return;
   }
 
@@ -43,7 +40,6 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
 
       // Reply 400.
       RTC::StunPacket* response = packet->CreateErrorResponse(400);
-
       response->Serialize(StunSerializeBuffer);
       if (m_send_cb) {
         m_send_cb((char*)StunSerializeBuffer, response->GetSize(), remoteAddr);
