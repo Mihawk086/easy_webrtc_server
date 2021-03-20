@@ -1,16 +1,9 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library","cc_import")
 
-filegroup(
-    name = "all_files",
-    srcs = glob(
-        ["**/*"],
-    ),
-)
-
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "dtls",
+    name = "log",
     srcs = glob([
         "*.c",
         "*.cpp",
@@ -22,9 +15,7 @@ cc_library(
     visibility = [
         "//visibility:public",
     ],
-    copts= ["-l/home/xueyuegui/easy-webrtc-server/thirdparty/include"],
-    deps = [
-      "//log",
-    ],
+    copts= [],
+    deps = [],
 )
  
