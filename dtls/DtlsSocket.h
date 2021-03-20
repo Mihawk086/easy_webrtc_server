@@ -2,20 +2,19 @@
 #define ERIZO_SRC_ERIZO_DTLS_DTLSSOCKET_H_
 
 extern "C" {
-#include <srtp2/srtp.h>
+#include "srtp2/srtp.h"
 }
 
-#include <openssl/crypto.h>
-#include <openssl/e_os2.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
-#include <openssl/ssl.h>
-
 #include <memory>
-#include <string>
 #include <mutex>
+#include <string>
 
 #include "log/logger.h"
+#include "openssl/crypto.h"
+#include "openssl/e_os2.h"
+#include "openssl/err.h"
+#include "openssl/rand.h"
+#include "openssl/ssl.h"
 
 const int SRTP_MASTER_KEY_KEY_LEN = 16;
 const int SRTP_MASTER_KEY_SALT_LEN = 14;

@@ -1,10 +1,11 @@
-#include <stdio.h>
-#include <errno.h>
-#include <openssl/bio.h>
 #include <assert.h>
+#include <errno.h>
 #include <memory.h>
+#include <stdio.h>
 
-#define BIO_TYPE_DWRAP       (50 | 0x0400 | 0x0200)
+#include "openssl/bio.h"
+
+#define BIO_TYPE_DWRAP (50 | 0x0400 | 0x0200)
 
 static int dwrap_new(BIO *bio);
 static int dwrap_free(BIO *a);
@@ -12,34 +13,22 @@ static int dwrap_read(BIO *b, char *out, int outl);
 static int dwrap_write(BIO *b, const char *in, int inl);
 static int dwrap_puts(BIO *b, const char *in);
 static int dwrap_gets(BIO *b, char *buf, int size);
-static long dwrap_ctrl(BIO *b, int cmd, long num, void *ptr);  // NOLINT(runtime/int)
+static long dwrap_ctrl(BIO *b, int cmd, long num, void *ptr);       // NOLINT(runtime/int)
 static long dwrap_callback_ctrl(BIO *b, int cmd, bio_info_cb *fp);  // NOLINT(runtime/int)
 
-static BIO_METHOD methods_dwrap = {
-  BIO_TYPE_DWRAP,
-  "dtls_wrapper",
-  dwrap_write,
-  dwrap_read,
-  dwrap_puts,
-  dwrap_gets,
-  dwrap_ctrl,
-  dwrap_new,
-  dwrap_free,
-  dwrap_callback_ctrl
-};
+static BIO_METHOD methods_dwrap = {BIO_TYPE_DWRAP, "dtls_wrapper",     dwrap_write, dwrap_read,
+                                   dwrap_puts,     dwrap_gets,         dwrap_ctrl,  dwrap_new,
+                                   dwrap_free,     dwrap_callback_ctrl};
 
 typedef struct BIO_F_DWRAP_CTX_ {
   int dgram_timer_exp;
 } BIO_F_DWRAP_CTX;
 
-
-BIO_METHOD *BIO_f_dwrap(void) {
-  return(&methods_dwrap);
-}
+BIO_METHOD *BIO_f_dwrap(void) { return (&methods_dwrap); }
 
 static int dwrap_new(BIO *bi) {
   BIO_F_DWRAP_CTX *ctx = OPENSSL_malloc(sizeof(BIO_F_BUFFER_CTX));
-  if (!ctx) return(0);
+  if (!ctx) return (0);
 
   memset(ctx, 0, sizeof(BIO_F_BUFFER_CTX));
 
@@ -99,7 +88,7 @@ static int dwrap_gets(BIO *b, char *buf, int size) {
 }
 
 static long dwrap_ctrl(BIO *b, int cmd, long num, void *ptr) {  // NOLINT(runtime/int)
-  long ret;  // NOLINT(runtime/int)
+  long ret;                                                     // NOLINT(runtime/int)
   BIO_F_DWRAP_CTX *ctx;
 
   ctx = b->ptr;
@@ -128,13 +117,12 @@ static long dwrap_ctrl(BIO *b, int cmd, long num, void *ptr) {  // NOLINT(runtim
 }
 
 static long dwrap_callback_ctrl(BIO *b, int cmd, bio_info_cb *fp) {  // NOLINT(runtime/int)
-  long ret;  // NOLINT(runtime/int)
+  long ret;                                                          // NOLINT(runtime/int)
 
   ret = BIO_callback_ctrl(b->next_bio, cmd, fp);
 
   return ret;
 }
-
 
 /* ====================================================================
 

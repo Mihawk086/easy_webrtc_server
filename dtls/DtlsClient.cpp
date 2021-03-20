@@ -1,25 +1,25 @@
 // #include <openssl/x509.h>
 
 extern "C" {
-#include <srtp2/srtp.h>
+#include "srtp2/srtp.h"
 }
-#include <openssl/bn.h>
-#include <openssl/crypto.h>
-#include <openssl/opensslv.h>
-#include <openssl/srtp.h>
-#include <openssl/ssl.h>
-#include <openssl/x509v3.h>
-
 #include <mutex>   // NOLINT
 #include <thread>  // NOLINT
+
+#include "openssl/bn.h"
+#include "openssl/crypto.h"
+#include "openssl/opensslv.h"
+#include "openssl/srtp.h"
+#include "openssl/ssl.h"
+#include "openssl/x509v3.h"
 
 //#include <nice/nice.h>
 
 #include <cassert>
 #include <cstring>
 #include <iostream>
-#include <string>
 #include <sstream>
+#include <string>
 
 #include "./DtlsSocket.h"
 #include "./bf_dwrap.h"
@@ -188,7 +188,7 @@ int createCert(const std::string& pAor, int expireDays, int keyLen, X509*& outCe
 
   // set version to X509v3 (starts from 0)
   // X509_set_version(cert, 0L);
-  //std::string thread_id = ::boostlexical_cast<std::string>(boost::this_thread::get_id());
+  // std::string thread_id = ::boostlexical_cast<std::string>(boost::this_thread::get_id());
   std::string thread_id;
   unsigned int thread_number = 0;
   sscanf(thread_id.c_str(), "%x", &thread_number);

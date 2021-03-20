@@ -14,8 +14,8 @@ add_library(webrtc ${SRC_LIST})
 
 file(GLOB EXAMPLE_LIST ./main/*.cpp)
 
-set(LINK_LIBRARYS   
-srtp2.a 
+set(LINK_LIBRARYS 
+${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/srtp2.a 
 ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libssl.a 
 ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libcrypto.a
 dl pthread )

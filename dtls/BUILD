@@ -22,7 +22,8 @@ cc_library(
     visibility = [
         "//visibility:public",
     ],
-    copts= ["-l/home/xueyuegui/easy-webrtc-server/thirdparty/include"],
+    copts = ["-Ithirdparty/include"],
+    #includes = ["thirdparty/include"],
     deps = [
       "//log",
     ],
