@@ -6,8 +6,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include)
 
-link_libraries(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib)
-
 file(GLOB SRC_LIST ./dtls/*.cpp ./dtls/*.c ./webrtctransport/*.cpp)
 
 add_library(webrtc ${SRC_LIST})
@@ -15,7 +13,7 @@ add_library(webrtc ${SRC_LIST})
 file(GLOB EXAMPLE_LIST ./main/*.cpp)
 
 set(LINK_LIBRARYS 
-${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/srtp2.a 
+${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libsrtp2.a 
 ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libssl.a 
 ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libcrypto.a
 dl pthread )
