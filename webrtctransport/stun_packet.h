@@ -49,7 +49,7 @@ class StunPacket {
   static StunPacket* Parse(const uint8_t* data, size_t len);
 
  private:
-  static const uint8_t magicCookie[];
+  static const uint8_t kMagicCookie[];
 
  public:
   StunPacket(Class klass, Method method, const uint8_t* transactionId, const uint8_t* data,
@@ -115,8 +115,8 @@ inline bool StunPacket::IsStun(const uint8_t* data, size_t len) {
 			// DOC: https://tools.ietf.org/html/draft-ietf-avtcore-rfc5764-mux-fixes
 			(data[0] < 3) &&
 			// Magic cookie must match.
-			(data[4] == StunPacket::magicCookie[0]) && (data[5] == StunPacket::magicCookie[1]) &&
-			(data[6] == StunPacket::magicCookie[2]) && (data[7] == StunPacket::magicCookie[3])
+			(data[4] == StunPacket::kMagicCookie[0]) && (data[5] == StunPacket::kMagicCookie[1]) &&
+			(data[6] == StunPacket::kMagicCookie[2]) && (data[7] == StunPacket::kMagicCookie[3])
 		);
   // clang-format on
 }
