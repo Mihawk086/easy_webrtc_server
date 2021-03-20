@@ -8,8 +8,8 @@
 #include <functional>
 #include <memory>
 
+#include "dtls/dtls_socket.h"
 #include "srtp_channel.h"
-#include "dtls/DtlsSocket.h"
 
 class DtlsTransport : dtls::DtlsReceiver {
  public:

@@ -21,7 +21,7 @@ extern "C" {
 #include <sstream>
 #include <string>
 
-#include "./DtlsSocket.h"
+#include "./dtls_socket.h"
 #include "./bf_dwrap.h"
 
 using dtls::DtlsSocket;
