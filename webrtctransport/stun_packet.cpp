@@ -1,12 +1,12 @@
 #define MS_CLASS "RTC::StunPacket"
 // #define MS_LOG_DEV
 
-#include "StunPacket.hpp"
+#include "stun_packet.h"
 
 #include <cstdio>   // std::snprintf()
 #include <cstring>  // std::memcmp(), std::memcpy()
 
-#include "Utils.hpp"
+#include "utils.h"
 
 namespace RTC {
 

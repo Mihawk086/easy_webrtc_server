@@ -2,7 +2,7 @@
  * Srtpchannel.cpp
  */
 
-#include "SrtpChannel.h"
+#include "srtp_channel.h"
 
 #include <openssl/bio.h>
 #include <openssl/buffer.h>

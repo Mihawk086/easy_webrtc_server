@@ -1,4 +1,4 @@
-#include "IceServer.h"
+#include "ice_server.h"
 
 #include <iostream>
 
@@ -7,10 +7,10 @@ static uint8_t StunSerializeBuffer[StunSerializeBufferSize];
 
 IceServer::IceServer() {}
 IceServer::~IceServer() {}
-IceServer::IceServer(const std::string& usernameFragment, const std::string& password)
-    : usernameFragment(usernameFragment), password(password) {}
+IceServer::IceServer(const std::string& username_fragment, const std::string& password)
+    : username_fragment_(username_fragment), password_(password) {}
 
-void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAddr) {
+void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remote_address) {
   // Must be a Binding method.
   if (packet->GetMethod() != RTC::StunPacket::Method::BINDING) {
     if (packet->GetClass() == RTC::StunPacket::Class::REQUEST) {
@@ -22,8 +22,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
       RTC::StunPacket* response = packet->CreateErrorResponse(400);
 
       response->Serialize(StunSerializeBuffer);
-      if (m_send_cb) {
-        m_send_cb((char*)StunSerializeBuffer, response->GetSize(), remoteAddr);
+      if (send_callback_) {
+        send_callback_((char*)StunSerializeBuffer, response->GetSize(), remote_address);
       }
       delete response;
     } else {
@@ -41,8 +41,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
       // Reply 400.
       RTC::StunPacket* response = packet->CreateErrorResponse(400);
       response->Serialize(StunSerializeBuffer);
-      if (m_send_cb) {
-        m_send_cb((char*)StunSerializeBuffer, response->GetSize(), remoteAddr);
+      if (send_callback_) {
+        send_callback_((char*)StunSerializeBuffer, response->GetSize(), remote_address);
       }
       delete response;
     } else {
@@ -63,8 +63,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
         RTC::StunPacket* response = packet->CreateErrorResponse(400);
 
         response->Serialize(StunSerializeBuffer);
-        if (m_send_cb) {
-          m_send_cb((char*)StunSerializeBuffer, response->GetSize(), remoteAddr);
+        if (send_callback_) {
+          send_callback_((char*)StunSerializeBuffer, response->GetSize(), remote_address);
         }
         delete response;
 
@@ -72,26 +72,26 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
       }
 
       // Check authentication.
-      switch (packet->CheckAuthentication(this->usernameFragment, this->password)) {
+      switch (packet->CheckAuthentication(this->username_fragment_, this->password_)) {
         case RTC::StunPacket::Authentication::OK: {
-          if (!this->oldPassword.empty()) {
-            ELOG_DEBUG("new ICE credentials applied");
+          if (!this->old_password_.empty()) {
+            ELOG_DEBUG("kNew ICE credentials applied");
 
-            this->oldUsernameFragment.clear();
-            this->oldPassword.clear();
+            this->old_username_fragment_.clear();
+            this->old_password_.clear();
           }
 
           break;
         }
 
         case RTC::StunPacket::Authentication::UNAUTHORIZED: {
-          // We may have changed our usernameFragment and password, so check
+          // We may have changed our username_fragment_ and password_, so check
           // the old ones.
           // clang-format off
 			if (
-				!this->oldUsernameFragment.empty() &&
-				!this->oldPassword.empty() &&
-				packet->CheckAuthentication(this->oldUsernameFragment, this->oldPassword) == RTC::StunPacket::Authentication::OK
+				!this->old_username_fragment_.empty() &&
+				!this->old_password_.empty() &&
+				packet->CheckAuthentication(this->old_username_fragment_, this->old_password_) == RTC::StunPacket::Authentication::OK
 				)
           // clang-format on
           {
@@ -105,8 +105,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
           RTC::StunPacket* response = packet->CreateErrorResponse(401);
 
           response->Serialize(StunSerializeBuffer);
-          if (m_send_cb) {
-            m_send_cb((char*)StunSerializeBuffer, response->GetSize(), remoteAddr);
+          if (send_callback_) {
+            send_callback_((char*)StunSerializeBuffer, response->GetSize(), remote_address);
           }
           delete response;
 
@@ -120,8 +120,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
           RTC::StunPacket* response = packet->CreateErrorResponse(400);
 
           response->Serialize(StunSerializeBuffer);
-          if (m_send_cb) {
-            m_send_cb((char*)StunSerializeBuffer, response->GetSize(), remoteAddr);
+          if (send_callback_) {
+            send_callback_((char*)StunSerializeBuffer, response->GetSize(), remote_address);
           }
           delete response;
 
@@ -156,23 +156,23 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
 
       // Add XOR-MAPPED-ADDRESS.
       // response->SetXorMappedAddress(tuple->GetRemoteAddress());
-      response->SetXorMappedAddress((struct sockaddr*)remoteAddr);
+      response->SetXorMappedAddress((struct sockaddr*)remote_address);
 
       // Authenticate the response.
-      if (this->oldPassword.empty())
-        response->Authenticate(this->password);
+      if (this->old_password_.empty())
+        response->Authenticate(this->password_);
       else
-        response->Authenticate(this->oldPassword);
+        response->Authenticate(this->old_password_);
 
       // Send back.
       response->Serialize(StunSerializeBuffer);
-      if (m_send_cb) {
-        m_send_cb((char*)StunSerializeBuffer, response->GetSize(), remoteAddr);
+      if (send_callback_) {
+        send_callback_((char*)StunSerializeBuffer, response->GetSize(), remote_address);
       }
       delete response;
 
       // Handle the tuple.
-      HandleTuple(remoteAddr, packet->HasUseCandidate());
+      HandleTuple(remote_address, packet->HasUseCandidate());
 
       break;
     }
@@ -197,28 +197,28 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, sockaddr_in* remoteAd
   }
 }
 
-void IceServer::HandleTuple(sockaddr_in* remoteAddr, bool hasUseCandidate) {
-  m_remoteAddr = *remoteAddr;
-  if (hasUseCandidate) {
-    this->state = IceState::COMPLETED;
+void IceServer::HandleTuple(sockaddr_in* remote_address, bool has_use_candidate) {
+  remote_address_ = *remote_address;
+  if (has_use_candidate) {
+    this->state = IceState::kCompleted;
   }
-  if (m_IceServerCompletedCB) {
-    m_IceServerCompletedCB();
+  if (ice_server_completed_callback_) {
+    ice_server_completed_callback_();
   }
 }
 
-const std::string& IceServer::GetUsernameFragment() const { return this->usernameFragment; }
+const std::string& IceServer::GetUsernameFragment() const { return this->username_fragment_; }
 
-const std::string& IceServer::GetPassword() const { return this->password; }
+const std::string& IceServer::GetPassword() const { return this->password_; }
 
-inline void IceServer::SetUsernameFragment(const std::string& usernameFragment) {
-  this->oldUsernameFragment = this->usernameFragment;
-  this->usernameFragment = usernameFragment;
+inline void IceServer::SetUsernameFragment(const std::string& username_fragment) {
+  this->old_username_fragment_ = this->username_fragment_;
+  this->username_fragment_ = username_fragment;
 }
 
 inline void IceServer::SetPassword(const std::string& password) {
-  this->oldPassword = this->password;
-  this->password = password;
+  this->old_password_ = this->password_;
+  this->password_ = password;
 }
 
 inline IceServer::IceState IceServer::GetState() const { return this->state; }

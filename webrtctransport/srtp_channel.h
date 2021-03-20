@@ -11,7 +11,7 @@
 #include <mutex>
 #include <string>
 
-#include "RtpHeaders.h"
+#include "rtp_headers.h"
 #include "log/logger.h"
 
 namespace erizo {

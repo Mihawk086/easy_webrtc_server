@@ -1,9 +1,9 @@
 #define MS_CLASS "Utils::Crypto"
 // #define MS_LOG_DEV
 
-#include <openssl/sha.h>
+#include "openssl/sha.h"
 
-#include "Utils.hpp"
+#include "utils.h"
 
 namespace Utils {
 /* Static variables. */

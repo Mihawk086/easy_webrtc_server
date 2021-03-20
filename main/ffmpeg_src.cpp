@@ -1,6 +1,6 @@
 #include "ffmpeg_src.h"
 
-#include "webrtctransport/WebRtcTransport.h"
+#include "webrtctransport/webrtc_transport.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h"

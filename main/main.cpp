@@ -8,8 +8,8 @@
 #include "muduo/net/http/HttpRequest.h"
 #include "muduo/net/http/HttpResponse.h"
 #include "muduo/net/http/HttpServer.h"
-#include "webrtctransport/Utils.hpp"
-#include "webrtctransport/WebRtcTransport.h"
+#include "webrtctransport/utils.h"
+#include "webrtctransport/webrtc_transport.h"
 
 using namespace muduo;
 using namespace muduo::net;
