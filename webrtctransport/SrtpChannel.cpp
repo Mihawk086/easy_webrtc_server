@@ -2,15 +2,14 @@
  * Srtpchannel.cpp
  */
 
-#include <srtp2/srtp.h>
+#include "SrtpChannel.h"
 
-#include <openssl/evp.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
+#include <openssl/evp.h>
+#include <srtp2/srtp.h>
 
 #include <string>
-
-#include "SrtpChannel.h"
 
 namespace erizo {
 DEFINE_LOGGER(SrtpChannel, "SrtpChannel");
@@ -20,8 +19,7 @@ boost::mutex SrtpChannel::sessionMutex_;
 constexpr int kKeyStringLength = 32;
 
 uint8_t nibble_to_hex_char(uint8_t nibble) {
-  char buf[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
-                   '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+  char buf[16] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
   return buf[nibble & 0xF];
 }
@@ -31,14 +29,14 @@ std::string octet_string_hex_string(const void *s, int length) {
     return "";
   }
 
-  const uint8_t *str = (const uint8_t*)s;
+  const uint8_t *str = (const uint8_t *)s;
   int i = 0;
 
   char bit_string[kKeyStringLength * 2];
 
   for (i = 0; i < kKeyStringLength * 2; i += 2) {
-      bit_string[i]   = nibble_to_hex_char(*str >> 4);
-      bit_string[i + 1] = nibble_to_hex_char(*str++ & 0xF);
+    bit_string[i] = nibble_to_hex_char(*str >> 4);
+    bit_string[i + 1] = nibble_to_hex_char(*str++ & 0xF);
   }
   return std::string(bit_string);
 }
@@ -69,8 +67,9 @@ SrtpChannel::~SrtpChannel() {
 }
 
 bool SrtpChannel::setRtpParams(const std::string &sendingKey, const std::string &receivingKey) {
-  ELOG_DEBUG("Configuring srtp local key %s remote key %s", sendingKey.c_str(), receivingKey.c_str());
-  if (configureSrtpSession(&send_session_,    sendingKey,   SENDING) &&
+  ELOG_DEBUG("Configuring srtp local key %s remote key %s", sendingKey.c_str(),
+             receivingKey.c_str());
+  if (configureSrtpSession(&send_session_, sendingKey, SENDING) &&
       configureSrtpSession(&receive_session_, receivingKey, RECEIVING)) {
     active_ = true;
     return active_;
@@ -79,10 +78,10 @@ bool SrtpChannel::setRtpParams(const std::string &sendingKey, const std::string 
 }
 
 bool SrtpChannel::setRtcpParams(const std::string &sendingKey, const std::string &receivingKey) {
-    return 0;
+  return 0;
 }
 
-int SrtpChannel::protectRtp(char* buffer, int *len) {
+int SrtpChannel::protectRtp(char *buffer, int *len) {
   if (!active_) {
     return -1;
   }
@@ -90,44 +89,44 @@ int SrtpChannel::protectRtp(char* buffer, int *len) {
   if (val == 0) {
     return 0;
   } else {
-    RtcpHeader* head = reinterpret_cast<RtcpHeader*>(buffer);
-    RtpHeader* headrtp = reinterpret_cast<RtpHeader*>(buffer);
+    RtcpHeader *head = reinterpret_cast<RtcpHeader *>(buffer);
+    RtpHeader *headrtp = reinterpret_cast<RtpHeader *>(buffer);
 
     if (val != 10) {  // Do not warn about reply errors
-      ELOG_DEBUG("Error SrtpChannel::protectRtp %u packettype %d pt %d seqnum %u",
-                 val, head->packettype, headrtp->payloadtype, headrtp->seqnum);
+      ELOG_DEBUG("Error SrtpChannel::protectRtp %u packettype %d pt %d seqnum %u", val,
+                 head->packettype, headrtp->payloadtype, headrtp->seqnum);
     }
     return -1;
   }
 }
 
-int SrtpChannel::unprotectRtp(char* buffer, int *len) {
+int SrtpChannel::unprotectRtp(char *buffer, int *len) {
   if (!active_) {
     return -1;
   }
-  int val = srtp_unprotect(receive_session_, reinterpret_cast<char*>(buffer), len);
+  int val = srtp_unprotect(receive_session_, reinterpret_cast<char *>(buffer), len);
   if (val == 0) {
     return 0;
   } else {
-    RtcpHeader* head = reinterpret_cast<RtcpHeader*>(buffer);
-    RtpHeader* headrtp = reinterpret_cast<RtpHeader*>(buffer);
+    RtcpHeader *head = reinterpret_cast<RtcpHeader *>(buffer);
+    RtpHeader *headrtp = reinterpret_cast<RtpHeader *>(buffer);
     if (val != 10) {  // Do not warn about reply errors
-      ELOG_DEBUG("Error SrtpChannel::unprotectRtp %u packettype %d pt %d",
-                 val, head->packettype, headrtp->payloadtype);
+      ELOG_DEBUG("Error SrtpChannel::unprotectRtp %u packettype %d pt %d", val, head->packettype,
+                 headrtp->payloadtype);
     }
     return -1;
   }
 }
 
-int SrtpChannel::protectRtcp(char* buffer, int *len) {
+int SrtpChannel::protectRtcp(char *buffer, int *len) {
   if (!active_) {
     return -1;
   }
-  int val = srtp_protect_rtcp(send_session_, reinterpret_cast<char*>(buffer), len);
+  int val = srtp_protect_rtcp(send_session_, reinterpret_cast<char *>(buffer), len);
   if (val == 0) {
     return 0;
   } else {
-    RtcpHeader* head = reinterpret_cast<RtcpHeader*>(buffer);
+    RtcpHeader *head = reinterpret_cast<RtcpHeader *>(buffer);
     if (val != 10) {  // Do not warn about reply errors
       ELOG_DEBUG("Error SrtpChannel::protectRtcp %upackettype %d ", val, head->packettype);
     }
@@ -135,7 +134,7 @@ int SrtpChannel::protectRtcp(char* buffer, int *len) {
   }
 }
 
-int SrtpChannel::unprotectRtcp(char* buffer, int *len) {
+int SrtpChannel::unprotectRtcp(char *buffer, int *len) {
   if (!active_) {
     return -1;
   }
@@ -150,32 +149,28 @@ int SrtpChannel::unprotectRtcp(char* buffer, int *len) {
   }
 }
 
+static std::string base64Decode(char *input, int length, bool newLine) {
+  BIO *b64 = NULL;
+  BIO *bmem = NULL;
+  char *buffer = (char *)malloc(length);
+  memset(buffer, 0, length);
+  b64 = BIO_new(BIO_f_base64());
+  if (!newLine) {
+    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+  }
+  bmem = BIO_new_mem_buf(input, length);
+  bmem = BIO_push(b64, bmem);
+  BIO_read(bmem, buffer, length);
+  BIO_free_all(bmem);
 
+  std::string out(buffer);
+  free(buffer);
 
-static std::string base64Decode(char *input, int length, bool newLine)
-{
-    BIO *b64 = NULL;
-    BIO *bmem = NULL;
-    char *buffer = (char *)malloc(length);
-    memset(buffer, 0, length);
-    b64 = BIO_new(BIO_f_base64());
-    if (!newLine) {
-        BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-    }
-    bmem = BIO_new_mem_buf(input, length);
-    bmem = BIO_push(b64, bmem);
-    BIO_read(bmem, buffer, length);
-    BIO_free_all(bmem);
-
-    std::string out(buffer);
-    free(buffer);
-
-    return out;
+  return out;
 }
 
-
-
-bool SrtpChannel::configureSrtpSession(srtp_t *session, const std::string &key, enum TransmissionType type) {
+bool SrtpChannel::configureSrtpSession(srtp_t *session, const std::string &key,
+                                       enum TransmissionType type) {
   srtp_policy_t policy;
   memset(&policy, 0, sizeof(policy));
   srtp_crypto_policy_set_aes_cm_128_hmac_sha1_80(&policy.rtp);
@@ -194,25 +189,28 @@ bool SrtpChannel::configureSrtpSession(srtp_t *session, const std::string &key, 
 
   /*
   gsize len = 0;
-  uint8_t *akey = reinterpret_cast<uint8_t*>(g_base64_decode(reinterpret_cast<const gchar*>(key.c_str()), &len));
-  ELOG_DEBUG("set master key/salt to %s/", octet_string_hex_string(akey, 16).c_str());
+  uint8_t *akey = reinterpret_cast<uint8_t*>(g_base64_decode(reinterpret_cast<const
+  gchar*>(key.c_str()), &len)); ELOG_DEBUG("set master key/salt to %s/",
+  octet_string_hex_string(akey, 16).c_str());
   // allocate and initialize the SRTP session
   policy.key = akey;
   int res = srtp_create(session, &policy);
   if (res != 0) {
-    ELOG_ERROR("Failed to create srtp session with %s, %d", octet_string_hex_string(akey, 16).c_str(), res);
+    ELOG_ERROR("Failed to create srtp session with %s, %d", octet_string_hex_string(akey,
+  16).c_str(), res);
   }
   g_free(akey); akey = NULL;
   */
 
-    std::string strkey = base64Decode(const_cast<char*>(key.c_str()),key.size(),false);
-    policy.key = (unsigned char *)strkey.c_str();
-    int res = srtp_create(session, &policy);
-    if (res != 0) {
-        ELOG_ERROR("Failed to create srtp session with %s, %d", octet_string_hex_string(strkey.c_str(), 16).c_str(), res);
-    }
+  std::string strkey = base64Decode(const_cast<char *>(key.c_str()), key.size(), false);
+  policy.key = (unsigned char *)strkey.c_str();
+  int res = srtp_create(session, &policy);
+  if (res != 0) {
+    ELOG_ERROR("Failed to create srtp session with %s, %d",
+               octet_string_hex_string(strkey.c_str(), 16).c_str(), res);
+  }
 
-  return res != 0? false:true;
+  return res != 0 ? false : true;
 }
 
 } /*namespace erizo */

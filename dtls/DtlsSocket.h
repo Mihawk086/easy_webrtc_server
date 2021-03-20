@@ -2,18 +2,17 @@
 #define ERIZO_SRC_ERIZO_DTLS_DTLSSOCKET_H_
 
 extern "C" {
-  #include <srtp2/srtp.h>
+#include <srtp2/srtp.h>
 }
 
-#include <openssl/e_os2.h>
-#include <openssl/rand.h>
-#include <openssl/err.h>
 #include <openssl/crypto.h>
+#include <openssl/e_os2.h>
+#include <openssl/err.h>
+#include <openssl/rand.h>
 #include <openssl/ssl.h>
 
-#include <boost/thread/mutex.hpp>
 #include <boost/shared_ptr.hpp>
-
+#include <boost/thread/mutex.hpp>
 #include <memory>
 #include <string>
 
@@ -40,16 +39,20 @@ class SrtpSessionKeys {
   }
   ~SrtpSessionKeys() {
     if (clientMasterKey) {
-      delete[] clientMasterKey; clientMasterKey = NULL;
+      delete[] clientMasterKey;
+      clientMasterKey = NULL;
     }
     if (serverMasterKey) {
-      delete[] serverMasterKey; serverMasterKey = NULL;
+      delete[] serverMasterKey;
+      serverMasterKey = NULL;
     }
     if (clientMasterSalt) {
-      delete[] clientMasterSalt; clientMasterSalt = NULL;
+      delete[] clientMasterSalt;
+      clientMasterSalt = NULL;
     }
     if (serverMasterSalt) {
-      delete[] serverMasterSalt; serverMasterSalt = NULL;
+      delete[] serverMasterSalt;
+      serverMasterSalt = NULL;
     }
   }
   unsigned char *clientMasterKey;
@@ -66,23 +69,23 @@ class DtlsSocket {
   DECLARE_LOGGER();
 
  public:
-  enum SocketType { Client, Server};
+  enum SocketType { Client, Server };
   // Creates an SSL socket, and if client sets state to connect_state and
   // if server sets state to accept_state.  Sets SSL BIO's.
-  DtlsSocket(DtlsSocketContext* socketContext, enum SocketType type);
+  DtlsSocket(DtlsSocketContext *socketContext, enum SocketType type);
   ~DtlsSocket();
 
   void close();
 
   // Inspects packet to see if it's a DTLS packet, if so continue processing
-  bool handlePacketMaybe(const unsigned char* bytes, unsigned int len);
+  bool handlePacketMaybe(const unsigned char *bytes, unsigned int len);
 
   // Retrieves the finger print of the certificate presented by the remote party
   bool getRemoteFingerprint(char *fingerprint);
 
   // Retrieves the finger print of the certificate presented by the remote party and checks
   // it agains the passed in certificate
-  bool checkFingerprint(const char* fingerprint, unsigned int len);
+  bool checkFingerprint(const char *fingerprint, unsigned int len);
 
   // Retrieves the finger print of our local certificate, same as getMyCertFingerprint
   void getMyCertFingerprint(char *fingerprint);
@@ -91,17 +94,18 @@ class DtlsSocket {
   void startClient();
 
   // Retreives the SRTP session keys from the Dtls session
-  SrtpSessionKeys* getSrtpSessionKeys();
+  SrtpSessionKeys *getSrtpSessionKeys();
 
   // Utility fn to compute a certificates fingerprint
   static void computeFingerprint(X509 *cert, char *fingerprint);
 
   // Retrieves the DTLS negotiated SRTP profile - may return 0 if profile selection failed
-  SRTP_PROTECTION_PROFILE* getSrtpProfile();
+  SRTP_PROTECTION_PROFILE *getSrtpProfile();
 
   // Creates SRTP session policies appropriately based on socket type (client vs server) and keys
   // extracted from the DTLS handshake process
-  void createSrtpSessionPolicies(srtp_policy_t& outboundPolicy, srtp_policy_t& inboundPolicy);  // NOLINT
+  void createSrtpSessionPolicies(srtp_policy_t &outboundPolicy,
+                                 srtp_policy_t &inboundPolicy);  // NOLINT
 
   void handleTimeout();
 
@@ -109,12 +113,11 @@ class DtlsSocket {
   // Causes an immediate handshake iteration to happen, which will retransmit the handshake
   void forceRetransmit();
 
-
   // Give CPU cyces to the handshake process - checks current state and acts appropraitely
   void doHandshakeIteration();
 
   // Internals
-  DtlsSocketContext* mSocketContext;
+  DtlsSocketContext *mSocketContext;
 
   // OpenSSL context data
   SSL *mSsl;
@@ -128,10 +131,11 @@ class DtlsSocket {
 
 class DtlsReceiver {
  public:
-  virtual void onDtlsPacket(DtlsSocketContext *ctx, const unsigned char* data, unsigned int len) = 0;
-  virtual void onHandshakeCompleted(DtlsSocketContext *ctx, std::string clientKey, std::string serverKey,
-                                    std::string srtp_profile) = 0;
-  virtual void onHandshakeFailed(DtlsSocketContext *ctx, const std::string& error) = 0;
+  virtual void onDtlsPacket(DtlsSocketContext *ctx, const unsigned char *data,
+                            unsigned int len) = 0;
+  virtual void onHandshakeCompleted(DtlsSocketContext *ctx, std::string clientKey,
+                                    std::string serverKey, std::string srtp_profile) = 0;
+  virtual void onHandshakeFailed(DtlsSocketContext *ctx, const std::string &error) = 0;
 };
 
 class DtlsSocketContext {
@@ -147,38 +151,39 @@ class DtlsSocketContext {
   void close();
 
   void start();
-  void read(const unsigned char* data, unsigned int len);
-  void write(const unsigned char* data, unsigned int len);
+  void read(const unsigned char *data, unsigned int len);
+  void write(const unsigned char *data, unsigned int len);
   void handshakeCompleted();
   void handshakeFailed(const char *err);
   void setDtlsReceiver(DtlsReceiver *recv);
-  void setDtlsSocket(DtlsSocket *sock) {mSocket = sock;}
+  void setDtlsSocket(DtlsSocket *sock) { mSocket = sock; }
   std::string getFingerprint() const;
 
   void handleTimeout();
 
-  enum PacketType { rtp, dtls, stun, unknown};
-
+  enum PacketType { rtp, dtls, stun, unknown };
 
   // Creates a new DtlsSocket to be used as a client
-  DtlsSocket* createClient();
+  DtlsSocket *createClient();
 
   // Creates a new DtlsSocket to be used as a server
-  DtlsSocket* createServer();
+  DtlsSocket *createServer();
 
   // Returns the fingerprint of the user cert that was passed into the constructor
   void getMyCertFingerprint(char *fingerprint);
 
-  // The default SrtpProfile used at construction time (default is: SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32)
-  static const char* DefaultSrtpProfile;
+  // The default SrtpProfile used at construction time (default is:
+  // SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32)
+  static const char *DefaultSrtpProfile;
 
-  // Changes the default SRTP profiles supported (default is: SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32)
+  // Changes the default SRTP profiles supported (default is:
+  // SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32)
   void setSrtpProfiles(const char *policyStr);
 
   // Changes the default DTLS Cipher Suites supported
   void setCipherSuites(const char *cipherSuites);
 
-  SSL_CTX* getSSLContext();
+  SSL_CTX *getSSLContext();
 
   // Examines the first few bits of a packet to determine its type: rtp, dtls, stun or unknown
   static PacketType demuxPacket(const unsigned char *buf, unsigned int len);
@@ -194,8 +199,9 @@ class DtlsSocketContext {
   DtlsReceiver *receiver;
 
  private:
-  // Creates a DTLS SSL Context and enables srtp extension, also sets the private and public key cert
-  SSL_CTX* mContext;
+  // Creates a DTLS SSL Context and enables srtp extension, also sets the private and public key
+  // cert
+  SSL_CTX *mContext;
 };
 }  // namespace dtls
 

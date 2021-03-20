@@ -1,17 +1,17 @@
 #define MS_CLASS "Utils::Crypto"
 // #define MS_LOG_DEV
 
-#include "Utils.hpp"
 #include <openssl/sha.h>
 
-namespace Utils
-{
-	/* Static variables. */
+#include "Utils.hpp"
 
-	uint32_t Crypto::seed;
-	HMAC_CTX* Crypto::hmacSha1Ctx{ nullptr };
-	uint8_t Crypto::hmacSha1Buffer[20]; // SHA-1 result is 20 bytes long.
-	// clang-format off
+namespace Utils {
+/* Static variables. */
+
+uint32_t Crypto::seed;
+HMAC_CTX* Crypto::hmacSha1Ctx{nullptr};
+uint8_t Crypto::hmacSha1Buffer[20];  // SHA-1 result is 20 bytes long.
+// clang-format off
 	const uint32_t Crypto::crc32Table[] =
 	{
 		0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3,
@@ -47,99 +47,89 @@ namespace Utils
 		0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693, 0x54de5729, 0x23d967bf,
 		0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 	};
-	// clang-format on
+// clang-format on
 
-	/* Static methods. */
+/* Static methods. */
 
-	void Crypto::ClassInit()
-	{
-		//MS_TRACE();
+void Crypto::ClassInit() {
+  // MS_TRACE();
 
-		// Init the vrypto seed with a random number taken from the address
-		// of the seed variable itself (which is random).
-		Crypto::seed = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(std::addressof(Crypto::seed)));
+  // Init the vrypto seed with a random number taken from the address
+  // of the seed variable itself (which is random).
+  Crypto::seed = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(std::addressof(Crypto::seed)));
 
-		// Create an OpenSSL HMAC_CTX context for HMAC SHA1 calculation.
-		//Crypto::hmacSha1Ctx = HMAC_CTX_new();
-		if(Crypto::hmacSha1Ctx == nullptr){
-            Crypto::hmacSha1Ctx = new HMAC_CTX;
-		}
-	}
+  // Create an OpenSSL HMAC_CTX context for HMAC SHA1 calculation.
+  // Crypto::hmacSha1Ctx = HMAC_CTX_new();
+  if (Crypto::hmacSha1Ctx == nullptr) {
+    Crypto::hmacSha1Ctx = new HMAC_CTX;
+  }
+}
 
-	void Crypto::ClassDestroy()
-	{
-		//MS_TRACE();
+void Crypto::ClassDestroy() {
+  // MS_TRACE();
 
-		if (Crypto::hmacSha1Ctx != nullptr)
-        {
-		    delete Crypto::hmacSha1Ctx;
-        }
-			//HMAC_CTX_free(Crypto::hmacSha1Ctx);
+  if (Crypto::hmacSha1Ctx != nullptr) {
+    delete Crypto::hmacSha1Ctx;
+  }
+  // HMAC_CTX_free(Crypto::hmacSha1Ctx);
+}
 
-	}
+const uint8_t* Crypto::GetHmacShA1(const std::string& key, const uint8_t* data, size_t len) {
+  // MS_TRACE();
 
-	const uint8_t* Crypto::GetHmacShA1(const std::string& key, const uint8_t* data, size_t len)
-	{
-		//MS_TRACE();
+  int ret;
 
-		int ret;
+  ret = HMAC_Init_ex(Crypto::hmacSha1Ctx, key.c_str(), key.length(), EVP_sha1(), nullptr);
 
-		ret = HMAC_Init_ex(Crypto::hmacSha1Ctx, key.c_str(), key.length(), EVP_sha1(), nullptr);
+  // MS_ASSERT(ret == 1, "OpenSSL HMAC_Init_ex() failed with key '%s'", key.c_str());
 
-		//MS_ASSERT(ret == 1, "OpenSSL HMAC_Init_ex() failed with key '%s'", key.c_str());
+  ret = HMAC_Update(Crypto::hmacSha1Ctx, data, static_cast<int>(len));
+  /*
+  MS_ASSERT(
+    ret == 1,
+    "OpenSSL HMAC_Update() failed with key '%s' and data length %zu bytes",
+    key.c_str(),
+    len);
+    */
+  uint32_t resultLen;
 
-		ret = HMAC_Update(Crypto::hmacSha1Ctx, data, static_cast<int>(len));
-		/*
-		MS_ASSERT(
-		  ret == 1,
-		  "OpenSSL HMAC_Update() failed with key '%s' and data length %zu bytes",
-		  key.c_str(),
-		  len);
-		  */
-		uint32_t resultLen;
+  ret = HMAC_Final(Crypto::hmacSha1Ctx, (uint8_t*)Crypto::hmacSha1Buffer, &resultLen);
 
-		ret = HMAC_Final(Crypto::hmacSha1Ctx, (uint8_t*)Crypto::hmacSha1Buffer, &resultLen);
-
-		/*
-		MS_ASSERT(
-		  ret == 1, "OpenSSL HMAC_Final() failed with key '%s' and data length %zu bytes", key.c_str(), len);
-		MS_ASSERT(resultLen == 20, "OpenSSL HMAC_Final() resultLen is %u instead of 20", resultLen);
-		*/
-		return Crypto::hmacSha1Buffer;
-	}
-} // namespace Utils
-
+  /*
+  MS_ASSERT(
+    ret == 1, "OpenSSL HMAC_Final() failed with key '%s' and data length %zu bytes", key.c_str(),
+  len); MS_ASSERT(resultLen == 20, "OpenSSL HMAC_Final() resultLen is %u instead of 20", resultLen);
+  */
+  return Crypto::hmacSha1Buffer;
+}
+}  // namespace Utils
 
 namespace Utils {
-	void IP::GetAddressInfo(const struct sockaddr* addr, int& family, std::string& ip, uint16_t& port)
-	{
-		char ipBuffer[INET6_ADDRSTRLEN + 1];
-		int err;
+void IP::GetAddressInfo(const struct sockaddr* addr, int& family, std::string& ip, uint16_t& port) {
+  char ipBuffer[INET6_ADDRSTRLEN + 1];
+  int err;
 
-		switch (addr->sa_family)
-		{
-		case AF_INET:
-		{
-			ip = inet_ntoa(reinterpret_cast<const struct sockaddr_in*>(addr)->sin_addr);
-			port = static_cast<uint16_t>(ntohs(reinterpret_cast<const struct sockaddr_in*>(addr)->sin_port));
-			break;
-		}
+  switch (addr->sa_family) {
+    case AF_INET: {
+      ip = inet_ntoa(reinterpret_cast<const struct sockaddr_in*>(addr)->sin_addr);
+      port =
+          static_cast<uint16_t>(ntohs(reinterpret_cast<const struct sockaddr_in*>(addr)->sin_port));
+      break;
+    }
 
-		case AF_INET6:
-		{
+    case AF_INET6: {
+      port = static_cast<uint16_t>(
+          ntohs(reinterpret_cast<const struct sockaddr_in6*>(addr)->sin6_port));
+      break;
+    }
 
-			port = static_cast<uint16_t>(ntohs(reinterpret_cast<const struct sockaddr_in6*>(addr)->sin6_port));
-			break;
-		}
+    default: {
+      // MS_ABORT("unknown network family: %d", static_cast<int>(addr->sa_family));
+    }
+  }
 
-		default:
-		{
-			//MS_ABORT("unknown network family: %d", static_cast<int>(addr->sa_family));
-		}
-		}
-
-		family = addr->sa_family;
-		ip.assign(ipBuffer);
-	}
-
+  family = addr->sa_family;
+  ip.assign(ipBuffer);
 }
+
+}  // namespace Utils

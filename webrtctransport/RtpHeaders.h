@@ -10,39 +10,39 @@
 
 namespace erizo {
 // Payload types
-#define RTCP_Sender_PT       200  // RTCP Sender Report
-#define RTCP_Receiver_PT     201  // RTCP Receiver Report
-#define RTCP_SDES_PT         202
-#define RTCP_BYE             203
-#define RTCP_APP             204
+#define RTCP_Sender_PT 200    // RTCP Sender Report
+#define RTCP_Receiver_PT 201  // RTCP Receiver Report
+#define RTCP_SDES_PT 202
+#define RTCP_BYE 203
+#define RTCP_APP 204
 #define RTCP_RTP_Feedback_PT 205  // RTCP Transport Layer Feedback Packet
-#define RTCP_PS_Feedback_PT  206  // RTCP Payload Specific Feedback Packet
+#define RTCP_PS_Feedback_PT 206   // RTCP Payload Specific Feedback Packet
 
-#define RTCP_PLI_FMT           1
-#define RTCP_SLI_FMT           2
-#define RTCP_FIR_FMT           4
-#define RTCP_AFB              15
+#define RTCP_PLI_FMT 1
+#define RTCP_SLI_FMT 2
+#define RTCP_FIR_FMT 4
+#define RTCP_AFB 15
 
-#define VP8_90000_PT        100  // VP8 Video Codec
-#define RED_90000_PT        116  // REDundancy (RFC 2198)
-#define RTX_90000_PT        96  // RTX packet
-#define ULP_90000_PT        117  // ULP/FEC
-#define ISAC_16000_PT       103  // ISAC Audio Codec
-#define ISAC_32000_PT       104  // ISAC Audio Codec
-#define PCMU_8000_PT        0   // PCMU Audio Codec
-#define OPUS_48000_PT       111  // Opus Audio Codec
-#define PCMA_8000_PT        8   // PCMA Audio Codec
-#define CN_8000_PT          13  // CN Audio Codec
-#define CN_16000_PT         105  // CN Audio Codec
-#define CN_32000_PT         106  // CN Audio Codec
-#define CN_48000_PT         107  // CN Audio Codec
-#define TEL_8000_PT         126  // Tel Audio Events
+#define VP8_90000_PT 100   // VP8 Video Codec
+#define RED_90000_PT 116   // REDundancy (RFC 2198)
+#define RTX_90000_PT 96    // RTX packet
+#define ULP_90000_PT 117   // ULP/FEC
+#define ISAC_16000_PT 103  // ISAC Audio Codec
+#define ISAC_32000_PT 104  // ISAC Audio Codec
+#define PCMU_8000_PT 0     // PCMU Audio Codec
+#define OPUS_48000_PT 111  // Opus Audio Codec
+#define PCMA_8000_PT 8     // PCMA Audio Codec
+#define CN_8000_PT 13      // CN Audio Codec
+#define CN_16000_PT 105    // CN Audio Codec
+#define CN_32000_PT 106    // CN Audio Codec
+#define CN_48000_PT 107    // CN Audio Codec
+#define TEL_8000_PT 126    // Tel Audio Events
 
-#define RTCP_MIN_PT         194  // per https://tools.ietf.org/html/rfc5761
-#define RTCP_MAX_PT         223
+#define RTCP_MIN_PT 194  // per https://tools.ietf.org/html/rfc5761
+#define RTCP_MAX_PT 223
 
 #define RTCP_AUDIO_INTERVAL 5000
-#define RTCP_VIDEO_INTERVAL  1000
+#define RTCP_VIDEO_INTERVAL 1000
 
 // enum for video rotation.
 enum VideoRotation {
@@ -66,7 +66,6 @@ static const uint16_t kNackCommonHeaderLengthBytes = 12;
 //   |                             ....                              |
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-
 // 0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -78,17 +77,17 @@ static const uint16_t kNackCommonHeaderLengthBytes = 12;
 class RtpHeader {
  public:
   static const int MIN_SIZE = 12;
-  uint32_t cc :4;
-  uint32_t hasextension :1;
-  uint32_t padding :1;
-  uint32_t version :2;
-  uint32_t payloadtype :7;
-  uint32_t marker :1;
-  uint32_t seqnum :16;
+  uint32_t cc : 4;
+  uint32_t hasextension : 1;
+  uint32_t padding : 1;
+  uint32_t version : 2;
+  uint32_t payloadtype : 7;
+  uint32_t marker : 1;
+  uint32_t seqnum : 16;
   uint32_t timestamp;
   uint32_t ssrc;
-  uint32_t extensionpayload:16;
-  uint32_t extensionlength:16;
+  uint32_t extensionpayload : 16;
+  uint32_t extensionlength : 16;
   /*    RFC 5285
       0                   1                   2                   3
      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -105,80 +104,45 @@ class RtpHeader {
   */
   uint32_t extensions;
 
-  inline RtpHeader() :
-    cc(0), hasextension(0), padding(0), version(2), payloadtype(0), marker(
-        0), seqnum(0), timestamp(0), ssrc(0), extensionpayload(0), extensionlength(0) {
-      // No implementation required
+  inline RtpHeader()
+      : cc(0),
+        hasextension(0),
+        padding(0),
+        version(2),
+        payloadtype(0),
+        marker(0),
+        seqnum(0),
+        timestamp(0),
+        ssrc(0),
+        extensionpayload(0),
+        extensionlength(0) {
+    // No implementation required
   }
 
-  inline uint8_t hasPadding() const {
-    return padding;
-  }
+  inline uint8_t hasPadding() const { return padding; }
 
-  inline void setPadding(uint8_t has_padding) {
-    padding = has_padding;
-  }
+  inline void setPadding(uint8_t has_padding) { padding = has_padding; }
 
-  inline uint8_t getVersion() const {
-    return version;
-  }
-  inline void setVersion(uint8_t aVersion) {
-    version = aVersion;
-  }
-  inline uint8_t getMarker() const {
-    return marker;
-  }
-  inline void setMarker(uint8_t aMarker) {
-    marker = aMarker;
-  }
-  inline uint8_t getExtension() const {
-    return hasextension;
-  }
-  inline void setExtension(uint8_t ext) {
-    hasextension = ext;
-  }
-  inline uint8_t getCc() const {
-    return cc;
-  }
-  inline void setCc(uint8_t theCc) {
-    cc = theCc;
-  }
-  inline uint8_t getPayloadType() const {
-    return payloadtype;
-  }
-  inline void setPayloadType(uint8_t aType) {
-    payloadtype = aType;
-  }
-  inline uint16_t getSeqNumber() const {
-    return ntohs(seqnum);
-  }
-  inline void setSeqNumber(uint16_t aSeqNumber) {
-    seqnum = htons(aSeqNumber);
-  }
-  inline uint32_t getTimestamp() const {
-    return ntohl(timestamp);
-  }
-  inline void setTimestamp(uint32_t aTimestamp) {
-    timestamp = htonl(aTimestamp);
-  }
-  inline uint32_t getSSRC() const {
-    return ntohl(ssrc);
-  }
-  inline void setSSRC(uint32_t aSSRC) {
-    ssrc = htonl(aSSRC);
-  }
-  inline uint16_t getExtId() const {
-    return ntohs(extensionpayload);
-  }
-  inline void setExtId(uint16_t extensionId) {
-    extensionpayload = htons(extensionId);
-  }
-  inline uint16_t getExtLength() const {
-    return ntohs(extensionlength);
-  }
-  inline void setExtLength(uint16_t extensionLength) {
-    extensionlength = htons(extensionLength);
-  }
+  inline uint8_t getVersion() const { return version; }
+  inline void setVersion(uint8_t aVersion) { version = aVersion; }
+  inline uint8_t getMarker() const { return marker; }
+  inline void setMarker(uint8_t aMarker) { marker = aMarker; }
+  inline uint8_t getExtension() const { return hasextension; }
+  inline void setExtension(uint8_t ext) { hasextension = ext; }
+  inline uint8_t getCc() const { return cc; }
+  inline void setCc(uint8_t theCc) { cc = theCc; }
+  inline uint8_t getPayloadType() const { return payloadtype; }
+  inline void setPayloadType(uint8_t aType) { payloadtype = aType; }
+  inline uint16_t getSeqNumber() const { return ntohs(seqnum); }
+  inline void setSeqNumber(uint16_t aSeqNumber) { seqnum = htons(aSeqNumber); }
+  inline uint32_t getTimestamp() const { return ntohl(timestamp); }
+  inline void setTimestamp(uint32_t aTimestamp) { timestamp = htonl(aTimestamp); }
+  inline uint32_t getSSRC() const { return ntohl(ssrc); }
+  inline void setSSRC(uint32_t aSSRC) { ssrc = htonl(aSSRC); }
+  inline uint16_t getExtId() const { return ntohs(extensionpayload); }
+  inline void setExtId(uint16_t extensionId) { extensionpayload = htons(extensionId); }
+  inline uint16_t getExtLength() const { return ntohs(extensionlength); }
+  inline void setExtLength(uint16_t extensionLength) { extensionlength = htons(extensionLength); }
   inline int getHeaderLength() const {
     return MIN_SIZE + cc * 4 + hasextension * (4 + ntohs(extensionlength) * 4);
   }
@@ -186,14 +150,10 @@ class RtpHeader {
 
 class VideoOrientation {
  public:
-  uint32_t ext_info:8;
-  uint32_t rotation_data:8;
-  inline uint8_t getId() {
-    return ext_info >> 4;
-  }
-  inline uint8_t getLength() {
-    return (ext_info & 0x0F);
-  }
+  uint32_t ext_info : 8;
+  uint32_t rotation_data : 8;
+  inline uint8_t getId() { return ext_info >> 4; }
+  inline uint8_t getLength() { return (ext_info & 0x0F); }
   inline VideoRotation getVideoOrientation() {
     return convertCVOByteToVideoRotation(rotation_data);
   }
@@ -217,20 +177,12 @@ class VideoOrientation {
 
 class AbsSendTimeExtension {
  public:
-  uint32_t ext_info:8;
-  uint32_t abs_data:24;
-  inline uint8_t getId() {
-    return ext_info >> 4;
-  }
-  inline uint8_t getLength() {
-    return (ext_info & 0x0F);
-  }
-  inline uint32_t getAbsSendTime() {
-    return ntohl(abs_data)>>8;
-  }
-  inline void setAbsSendTime(uint32_t aTime) {
-    abs_data = htonl(aTime)>>8;
-  }
+  uint32_t ext_info : 8;
+  uint32_t abs_data : 24;
+  inline uint8_t getId() { return ext_info >> 4; }
+  inline uint8_t getLength() { return (ext_info & 0x0F); }
+  inline uint32_t getAbsSendTime() { return ntohl(abs_data) >> 8; }
+  inline void setAbsSendTime(uint32_t aTime) { abs_data = htonl(aTime) >> 8; }
 };
 
 class RtpRtxHeader {
@@ -238,14 +190,9 @@ class RtpRtxHeader {
   RtpHeader rtpHeader;
   uint16_t osn;
 
-  inline uint16_t getOsn() {
-    return ntohs(osn);
-  }
-  inline void setOs(uint16_t theOsn) {
-    osn = htons(theOsn);
-  }
+  inline uint16_t getOsn() { return ntohs(osn); }
+  inline void setOs(uint16_t theOsn) { osn = htons(theOsn); }
 };
-
 
 // Generic NACK RTCP_RTP_FB + (FMT 1)rfc4585
 //      0                   1                   2                   3
@@ -256,21 +203,13 @@ class RtpRtxHeader {
 
 class NackBlock {
  public:
-  uint32_t pid:16;
-  uint32_t blp:16;
+  uint32_t pid : 16;
+  uint32_t blp : 16;
 
-  inline uint16_t getNackPid() {
-    return ntohs(pid);
-  }
-  inline void setNackPid(uint16_t new_pid) {
-    pid = htons(new_pid);
-  }
-  inline uint16_t getNackBlp() {
-    return ntohs(blp);
-  }
-  inline void setNackBlp(uint16_t new_blp) {
-    blp = htons(new_blp);
-  }
+  inline uint16_t getNackPid() { return ntohs(pid); }
+  inline void setNackPid(uint16_t new_pid) { pid = htons(new_pid); }
+  inline uint16_t getNackBlp() { return ntohs(blp); }
+  inline void setNackBlp(uint16_t new_blp) { blp = htons(new_blp); }
 };
 
 //  0                   1                   2                   3
@@ -349,21 +288,21 @@ class NackBlock {
 
 class RtcpHeader {
  public:
-  uint32_t blockcount :5;
-  uint32_t padding :1;
-  uint32_t version :2;
-  uint32_t packettype :8;
-  uint32_t length :16;
+  uint32_t blockcount : 5;
+  uint32_t padding : 1;
+  uint32_t version : 2;
+  uint32_t packettype : 8;
+  uint32_t length : 16;
   uint32_t ssrc;
 
   union report_t {
     struct receiverReport_t {
       uint32_t ssrcsource;
       /* RECEIVER REPORT DATA*/
-      uint32_t fractionlost:8;
-      int32_t lost:24;
-      uint32_t seqnumcycles:16;
-      uint32_t highestseqnum:16;
+      uint32_t fractionlost : 8;
+      int32_t lost : 24;
+      uint32_t seqnumcycles : 16;
+      uint32_t highestseqnum : 16;
       uint32_t jitter;
       uint32_t lastsr;
       uint32_t delaysincelast;
@@ -385,8 +324,8 @@ class RtcpHeader {
     struct remb_t {
       uint32_t ssrcsource;
       uint32_t uniqueid;
-      uint32_t numssrc:8;
-      uint32_t brLength :24;
+      uint32_t numssrc : 8;
+      uint32_t brLength : 24;
       uint32_t ssrcfeedb[50];
     } rembPacket;
 
@@ -398,131 +337,77 @@ class RtcpHeader {
     struct fir_t {
       uint32_t ssrcsource;
       uint32_t mediasource;
-      uint32_t seqnumber:8;
-      uint32_t reserved:24;
+      uint32_t seqnumber : 8;
+      uint32_t reserved : 24;
     } fir;
   } report;
 
-  inline RtcpHeader() : blockcount(0), padding(0), version(2), packettype(0), length(0), ssrc(0) {
-  }
+  inline RtcpHeader() : blockcount(0), padding(0), version(2), packettype(0), length(0), ssrc(0) {}
 
   inline bool isFeedback(void) {
-    return (packettype == RTCP_Receiver_PT ||
-        packettype == RTCP_PS_Feedback_PT ||
-        packettype == RTCP_RTP_Feedback_PT);
+    return (packettype == RTCP_Receiver_PT || packettype == RTCP_PS_Feedback_PT ||
+            packettype == RTCP_RTP_Feedback_PT);
   }
-  inline bool isREMB() {
-    return packettype == RTCP_PS_Feedback_PT && blockcount == RTCP_AFB;
-  }
-  inline bool isRtcp(void) {
-    return (packettype >= RTCP_MIN_PT && packettype <= RTCP_MAX_PT);
-  }
-  inline uint8_t getPacketType() {
-    return packettype;
-  }
-  inline void setPacketType(uint8_t pt) {
-    packettype = pt;
-  }
-  inline uint8_t getBlockCount() {
-    return (uint8_t)blockcount;
-  }
-  inline void setBlockCount(uint8_t count) {
-    blockcount = count;
-  }
-  inline uint16_t getLength() {
-    return ntohs(length);
-  }
-  inline void setLength(uint16_t theLength) {
-    length = htons(theLength);
-  }
-  inline uint32_t getSSRC() {
-    return ntohl(ssrc);
-  }
-  inline void setSSRC(uint32_t aSsrc) {
-    ssrc = htonl(aSsrc);
-  }
-  inline uint32_t getSourceSSRC() {
-    return ntohl(report.receiverReport.ssrcsource);
-  }
+  inline bool isREMB() { return packettype == RTCP_PS_Feedback_PT && blockcount == RTCP_AFB; }
+  inline bool isRtcp(void) { return (packettype >= RTCP_MIN_PT && packettype <= RTCP_MAX_PT); }
+  inline uint8_t getPacketType() { return packettype; }
+  inline void setPacketType(uint8_t pt) { packettype = pt; }
+  inline uint8_t getBlockCount() { return (uint8_t)blockcount; }
+  inline void setBlockCount(uint8_t count) { blockcount = count; }
+  inline uint16_t getLength() { return ntohs(length); }
+  inline void setLength(uint16_t theLength) { length = htons(theLength); }
+  inline uint32_t getSSRC() { return ntohl(ssrc); }
+  inline void setSSRC(uint32_t aSsrc) { ssrc = htonl(aSsrc); }
+  inline uint32_t getSourceSSRC() { return ntohl(report.receiverReport.ssrcsource); }
   inline void setSourceSSRC(uint32_t sourceSsrc) {
     report.receiverReport.ssrcsource = htonl(sourceSsrc);
   }
-  inline uint8_t getFractionLost() {
-    return (uint8_t)report.receiverReport.fractionlost;
-  }
+  inline uint8_t getFractionLost() { return (uint8_t)report.receiverReport.fractionlost; }
   inline void setFractionLost(uint8_t fractionLost) {
     report.receiverReport.fractionlost = fractionLost;
   }
-  inline uint32_t getLostPackets() {
-    return ntohl(report.receiverReport.lost) >> 8;
-  }
-  inline void setLostPackets(uint32_t lost) {
-    report.receiverReport.lost = htonl(lost) >> 8;
-  }
-  inline uint16_t getSeqnumCycles() {
-    return ntohs(report.receiverReport.seqnumcycles);
-  }
+  inline uint32_t getLostPackets() { return ntohl(report.receiverReport.lost) >> 8; }
+  inline void setLostPackets(uint32_t lost) { report.receiverReport.lost = htonl(lost) >> 8; }
+  inline uint16_t getSeqnumCycles() { return ntohs(report.receiverReport.seqnumcycles); }
   inline void setSeqnumCycles(uint16_t seqnumcycles) {
     report.receiverReport.seqnumcycles = htons(seqnumcycles);
   }
-  inline uint16_t getHighestSeqnum() {
-    return ntohs(report.receiverReport.highestseqnum);
-  }
+  inline uint16_t getHighestSeqnum() { return ntohs(report.receiverReport.highestseqnum); }
   inline void setHighestSeqnum(uint16_t highest) {
     report.receiverReport.highestseqnum = htons(highest);
   }
-  inline uint32_t getJitter() {
-    return ntohl(report.receiverReport.jitter);
-  }
-  inline void setJitter(uint32_t jitter) {
-    report.receiverReport.jitter = htonl(jitter);
-  }
-  inline uint32_t getLastSr() {
-    return ntohl(report.receiverReport.lastsr);
-  }
-  inline void setLastSr(uint32_t lastsr) {
-    report.receiverReport.lastsr = htonl(lastsr);
-  }
-  inline uint32_t getDelaySinceLastSr() {
-    return ntohl (report.receiverReport.delaysincelast);
-  }
+  inline uint32_t getJitter() { return ntohl(report.receiverReport.jitter); }
+  inline void setJitter(uint32_t jitter) { report.receiverReport.jitter = htonl(jitter); }
+  inline uint32_t getLastSr() { return ntohl(report.receiverReport.lastsr); }
+  inline void setLastSr(uint32_t lastsr) { report.receiverReport.lastsr = htonl(lastsr); }
+  inline uint32_t getDelaySinceLastSr() { return ntohl(report.receiverReport.delaysincelast); }
   inline void setDelaySinceLastSr(uint32_t delaylastsr) {
     report.receiverReport.delaysincelast = htonl(delaylastsr);
   }
-  inline uint32_t getPacketsSent() {
-    return ntohl(report.senderReport.packetsent);
-  }
+  inline uint32_t getPacketsSent() { return ntohl(report.senderReport.packetsent); }
   inline void setPacketsSent(uint32_t packetssent) {
     report.senderReport.packetsent = htonl(packetssent);
   }
-  inline uint32_t getOctetsSent() {
-    return ntohl(report.senderReport.octetssent);
-  }
+  inline uint32_t getOctetsSent() { return ntohl(report.senderReport.octetssent); }
   inline void setOctetsSent(uint32_t octets_sent) {
     report.senderReport.octetssent = htonl(octets_sent);
   }
   inline uint64_t getNtpTimestamp() {
-    return (((uint64_t)htonl(report.senderReport.ntptimestamp)) << 32) + htonl(report.senderReport.ntptimestamp >> 32);
+    return (((uint64_t)htonl(report.senderReport.ntptimestamp)) << 32) +
+           htonl(report.senderReport.ntptimestamp >> 32);
   }
   inline void setNtpTimestamp(uint64_t ntp_timestamp) {
-    report.senderReport.ntptimestamp = (((uint64_t)ntohl(ntp_timestamp)) << 32) + ntohl(ntp_timestamp >> 32);
+    report.senderReport.ntptimestamp =
+        (((uint64_t)ntohl(ntp_timestamp)) << 32) + ntohl(ntp_timestamp >> 32);
   }
   inline uint32_t get32MiddleNtp() {
     uint64_t middle = (report.senderReport.ntptimestamp << 16) >> 32;
     return ntohl(middle);
   }
-  inline uint16_t getNackPid() {
-    return report.nackPacket.nack_block.getNackPid();
-  }
-  inline void setNackPid(uint16_t pid) {
-    report.nackPacket.nack_block.setNackPid(pid);
-  }
-  inline uint16_t getNackBlp() {
-    return report.nackPacket.nack_block.getNackBlp();
-  }
-  inline void setNackBlp(uint16_t blp) {
-    report.nackPacket.nack_block.setNackBlp(blp);
-  }
+  inline uint16_t getNackPid() { return report.nackPacket.nack_block.getNackPid(); }
+  inline void setNackPid(uint16_t pid) { report.nackPacket.nack_block.setNackPid(pid); }
+  inline uint16_t getNackBlp() { return report.nackPacket.nack_block.getNackBlp(); }
+  inline void setNackBlp(uint16_t blp) { report.nackPacket.nack_block.setNackBlp(blp); }
   inline void setREMBBitRate(uint64_t bitRate) {
     uint64_t max = 0x3FFFF;  // 18 bits
     uint16_t exp = 0;
@@ -536,43 +421,26 @@ class RtcpHeader {
     uint32_t line = mantissa + (exp << 18);
     report.rembPacket.brLength = htonl(line) >> 8;
   }
-  inline uint64_t getREMBBitRate() {
-    return getBrMantis() << getBrExp();
-  }
+  inline uint64_t getREMBBitRate() { return getBrMantis() << getBrExp(); }
 
   inline uint32_t getBrExp() {
     // remove the 0s added by nothl (8) + the 18 bits of Mantissa
     return (ntohl(report.rembPacket.brLength) >> 26);
   }
-  inline uint32_t getBrMantis() {
-    return (ntohl(report.rembPacket.brLength) >> 8 & 0x3ffff);
-  }
-  inline uint8_t getREMBNumSSRC() {
-    return report.rembPacket.numssrc;
-  }
-  inline void setREMBNumSSRC(uint8_t num) {
-    report.rembPacket.numssrc = num;
-  }
+  inline uint32_t getBrMantis() { return (ntohl(report.rembPacket.brLength) >> 8 & 0x3ffff); }
+  inline uint8_t getREMBNumSSRC() { return report.rembPacket.numssrc; }
+  inline void setREMBNumSSRC(uint8_t num) { report.rembPacket.numssrc = num; }
   inline uint32_t getREMBFeedSSRC(uint8_t index) {
     return ntohl(report.rembPacket.ssrcfeedb[index]);
   }
   inline void setREMBFeedSSRC(uint8_t index, uint32_t ssrc) {
-     report.rembPacket.ssrcfeedb[index] = htonl(ssrc);
+    report.rembPacket.ssrcfeedb[index] = htonl(ssrc);
   }
-  inline uint32_t getFCI() {
-    return ntohl(report.pli.fci);
-  }
-  inline void setFCI(uint32_t fci) {
-    report.pli.fci = htonl(fci);
-  }
-  inline void setFIRSourceSSRC(uint32_t ssrc) {
-    report.fir.mediasource = htonl(ssrc);
-  }
-  inline void setFIRSequenceNumber(uint8_t seq_number) {
-    report.fir.seqnumber = seq_number;
-  }
+  inline uint32_t getFCI() { return ntohl(report.pli.fci); }
+  inline void setFCI(uint32_t fci) { report.pli.fci = htonl(fci); }
+  inline void setFIRSourceSSRC(uint32_t ssrc) { report.fir.mediasource = htonl(ssrc); }
+  inline void setFIRSequenceNumber(uint8_t seq_number) { report.fir.seqnumber = seq_number; }
 };
-
 
 //    0                   1                   2                   3
 //    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -600,16 +468,15 @@ class RtcpHeader {
 //   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 class FirHeader {
  public:
-  uint32_t fmt :5;
-  uint32_t padding :1;
-  uint32_t version :2;
-  uint32_t packettype :8;
-  uint32_t length :16;
+  uint32_t fmt : 5;
+  uint32_t padding : 1;
+  uint32_t version : 2;
+  uint32_t packettype : 8;
+  uint32_t length : 16;
   uint32_t ssrc;
   uint32_t ssrcofmediasource;
   uint32_t ssrc_fir;
 };
-
 
 //     0                   1                    2                   3
 //     0 1 2 3 4 5 6 7 8 9 0 1 2 3  4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -640,16 +507,14 @@ class FirHeader {
 //        block excluding header.
 class RedHeader {
  public:
-  uint32_t payloadtype :7;
-  uint32_t follow :1;
-  uint32_t tsLength :24;
+  uint32_t payloadtype : 7;
+  uint32_t follow : 1;
+  uint32_t tsLength : 24;
   uint32_t getTS() {
     // remove the 8 bits added by nothl + the 10 from length
     return (ntohl(tsLength) & 0xfffc0000) >> 18;
   }
-  uint32_t getLength() {
-    return (ntohl(tsLength) & 0x3ff00);
-  }
+  uint32_t getLength() { return (ntohl(tsLength) & 0x3ff00); }
 };
 }  // namespace erizo
 

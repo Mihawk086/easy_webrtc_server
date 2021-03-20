@@ -7,8 +7,8 @@
 
 #include <netinet/in.h>
 #include <srtp2/srtp.h>
-#include <boost/thread/mutex.hpp>
 
+#include <boost/thread/mutex.hpp>
 #include <string>
 
 #include "RtpHeaders.h"
@@ -37,28 +37,28 @@ class SrtpChannel {
    * @param len Pointer to the length of the data. The length is returned here
    * @return 0 or an error code
    */
-  int protectRtp(char* buffer, int *len);
+  int protectRtp(char *buffer, int *len);
   /**
    * Unprotects RTP Data
    * @param buffer Pointer to the buffer with the data. The unprotected data is returned here
    * @param len Pointer to the length of the data. The length is returned here
    * @return 0 or an error code
    */
-  int unprotectRtp(char* buffer, int *len);
+  int unprotectRtp(char *buffer, int *len);
   /**
    * Protects RTCP Data
    * @param buffer Pointer to the buffer with the data. The protected data is returned here
    * @param len Pointer to the length of the data. The length is returned here
    * @return 0 or an error code
    */
-  int protectRtcp(char* buffer, int *len);
+  int protectRtcp(char *buffer, int *len);
   /**
    * Unprotects RTCP Data
    * @param buffer Pointer to the buffer with the data. The unprotected data is returned here
    * @param len Pointer to the length of the data. The length is returned here
    * @return 0 or an error code
    */
-  int unprotectRtcp(char* buffer, int *len);
+  int unprotectRtcp(char *buffer, int *len);
   /**
    * Sets a key pair for the RTP channel
    * @param sendingKey The key for protecting data
@@ -75,9 +75,7 @@ class SrtpChannel {
   bool setRtcpParams(const std::string &sendingKey, const std::string &receivingKey);
 
  private:
-  enum TransmissionType {
-    SENDING, RECEIVING
-  };
+  enum TransmissionType { SENDING, RECEIVING };
 
   bool configureSrtpSession(srtp_t *session, const std::string &key, enum TransmissionType type);
 
