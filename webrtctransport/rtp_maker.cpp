@@ -25,8 +25,8 @@ typedef struct rtp_header {
   uint32_t csrc[16];
 } rtp_header;
 
-static void set_buf_rtp_video_header(char* pbuffer, uint32_t dwssrc, uint32_t dwtimestample,
-                                     uint16_t dwseqnum, bool marker) {
+static void SetVideoRtpHeader(char* pbuffer, uint32_t dwssrc, uint32_t dwtimestample,
+                              uint16_t dwseqnum, bool marker) {
   rtp_header* rtp_hdr = (rtp_header*)pbuffer;
   memset(rtp_hdr, 0, RTP_HEADER_SIZE);
   rtp_hdr->type = 96;
@@ -49,7 +49,7 @@ void RtpMaker::InputH264Frame(char* buf, int len, uint32_t timestamp) {
     memcpy(buf_ + RTP_HEADER_SIZE, frame_buf, frame_size);
     int rtpsize = frame_size + RTP_HEADER_SIZE;
     {
-      set_buf_rtp_video_header(buf_, ssrc_, timestamp, seq_++, true);
+      SetVideoRtpHeader(buf_, ssrc_, timestamp, seq_++, true);
       if (make_rtp_completed_callback) {
         make_rtp_completed_callback(buf_, rtpsize);
       }
@@ -70,7 +70,7 @@ void RtpMaker::InputH264Frame(char* buf, int len, uint32_t timestamp) {
       buf_[RTP_HEADER_SIZE + 1] = FU_A[1];
       memcpy(buf_ + RTP_HEADER_SIZE + 2, frame_buf, MAX_RTP_PAYLOAD_SIZE - 2);
       {
-        set_buf_rtp_video_header(buf_, ssrc_, timestamp, seq_++, false);
+        SetVideoRtpHeader(buf_, ssrc_, timestamp, seq_++, false);
         if (make_rtp_completed_callback) {
           make_rtp_completed_callback(buf_, rtpsize);
         }
@@ -88,7 +88,7 @@ void RtpMaker::InputH264Frame(char* buf, int len, uint32_t timestamp) {
       buf_[RTP_HEADER_SIZE + 1] = FU_A[1];
       memcpy(buf_ + RTP_HEADER_SIZE + 2, frame_buf, frame_size);
       {
-        set_buf_rtp_video_header(buf_, ssrc_, timestamp, seq_++, true);
+        SetVideoRtpHeader(buf_, ssrc_, timestamp, seq_++, true);
         if (make_rtp_completed_callback) {
           make_rtp_completed_callback(buf_, rtpsize);
         }
