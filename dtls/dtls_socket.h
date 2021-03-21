@@ -113,16 +113,16 @@ class DtlsSocket {
   void doHandshakeIteration();
 
   // Internals
-  DtlsSocketContext *mSocketContext;
+  DtlsSocketContext *dtls_socket_ctx_;
 
   // OpenSSL context data
-  SSL *mSsl;
-  BIO *mInBio;
-  BIO *mOutBio;
+  SSL *ssl_;
+  BIO *in_bio_;
+  BIO *out_bio_;
 
-  SocketType mSocketType;
-  bool mHandshakeCompleted;
-  std::mutex handshakeMutex_;
+  SocketType socket_type_;
+  bool is_handshake_completted;
+  std::mutex handshake_mutex_;
 };
 
 class DtlsReceiver {
@@ -150,7 +150,7 @@ class DtlsSocketContext {
   void handshakeCompleted();
   void handshakeFailed(const char *err);
   void setDtlsReceiver(DtlsReceiver *recv);
-  void setDtlsSocket(DtlsSocket *sock) { mSocket = sock; }
+  void setDtlsSocket(DtlsSocket *sock) { dtls_socket_ = sock; }
   std::string getFingerprint() const;
 
   void handleTimeout();
@@ -189,47 +189,14 @@ class DtlsSocketContext {
   static void Destroy();
 
  protected:
-  DtlsSocket *mSocket;
-  DtlsReceiver *receiver;
+  DtlsSocket *dtls_socket_;
+  DtlsReceiver *dtls_recevier_;
 
  private:
   // Creates a DTLS SSL Context and enables srtp extension, also sets the private and public key
   // cert
-  SSL_CTX *mContext;
+  SSL_CTX *ssl_ctx_;
 };
 }  // namespace dtls
 
 #endif  // ERIZO_SRC_ERIZO_DTLS_DTLSSOCKET_H_
-/* ====================================================================
-
-Copyright (c) 2007-2008, Eric Rescorla and Derek MacDonald
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. None of the contributors names may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-==================================================================== */

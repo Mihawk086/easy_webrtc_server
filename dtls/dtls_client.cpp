@@ -21,8 +21,8 @@ extern "C" {
 #include <sstream>
 #include <string>
 
-#include "./dtls_socket.h"
 #include "./bf_dwrap.h"
+#include "./dtls_socket.h"
 
 using dtls::DtlsSocket;
 using dtls::DtlsSocketContext;
@@ -82,16 +82,16 @@ void SSLInfoCallback(const SSL* s, int where, int ret) {
     str = "SSL_accept";
   }
   if (where & SSL_CB_LOOP) {
-    ELOG_DEBUG2(sslLogger, "%s", SSL_state_string_long(s));
+    ELOG_DEBUG2("%s", SSL_state_string_long(s));
   } else if (where & SSL_CB_ALERT) {
     str = (where & SSL_CB_READ) ? "read" : "write";
-    ELOG_DEBUG2(sslLogger, "SSL3 alert %d - %s; %s : %s", ret, str, SSL_alert_type_string_long(ret),
+    ELOG_DEBUG2("SSL3 alert %d - %s; %s : %s", ret, str, SSL_alert_type_string_long(ret),
                 SSL_alert_desc_string_long(ret));
   } else if (where & SSL_CB_EXIT) {
     if (ret == 0) {
-      ELOG_WARN2(sslLogger, "failed in %s", SSL_state_string_long(s));
+      ELOG_WARN2("failed in %s", SSL_state_string_long(s));
     } else if (ret < 0) {
-      ELOG_INFO2(sslLogger, "callback for %s", SSL_state_string_long(s));
+      ELOG_INFO2("callback for %s", SSL_state_string_long(s));
     }
   }
 }
@@ -104,8 +104,7 @@ int SSLVerifyCallback(int ok, X509_STORE_CTX* store) {
     int err = X509_STORE_CTX_get_error(store);
     X509_NAME_oneline(X509_get_issuer_name(cert), data, sizeof(data));
     X509_NAME_oneline(X509_get_subject_name(cert), data2, sizeof(data2));
-    ELOG_DEBUG2(sslLogger,
-                "Callback with certificate at depth: %d, issuer: %s, subject: %s, err: %d : %s",
+    ELOG_DEBUG2("Callback with certificate at depth: %d, issuer: %s, subject: %s, err: %d : %s",
                 depth, data, data2, err, X509_verify_cert_error_string(err));
   }
 
@@ -128,7 +127,7 @@ int SSLVerifyCallback(int ok, X509_STORE_CTX* store) {
       // unsigned char digest[EVP_MAX_MD_SIZE];
       // std::size_t digest_length;
 
-      ELOG_DEBUG2(sslLogger, "Accepted self-signed peer certificate authority");
+      ELOG_DEBUG2("Accepted self-signed peer certificate authority");
       ok = 1;
 
       /* TODO(javier)
@@ -147,7 +146,7 @@ int SSLVerifyCallback(int ok, X509_STORE_CTX* store) {
     }
   }
   if (!ok) {
-    ELOG_DEBUG2(sslLogger, "Ignoring cert error while verifying cert chain");
+    ELOG_DEBUG2("Ignoring cert error while verifying cert chain");
     ok = 1;
   }
 
@@ -158,7 +157,7 @@ int createCert(const std::string& pAor, int expireDays, int keyLen, X509*& outCe
                EVP_PKEY*& outKey) {  // NOLINT
   std::ostringstream info;
   info << "Generating new user cert for" << pAor;
-  ELOG_DEBUG2(sslLogger, "%s", info.str().c_str());
+  ELOG_DEBUG2("%s", info.str().c_str());
   std::string aor = "sip:" + pAor;
 
   // Make sure that necessary algorithms exist:
@@ -250,43 +249,43 @@ DtlsSocketContext::DtlsSocketContext() {
   // SSL_load_error_strings();    // 错误信息的初始化
   // SSL_library_init();    // 初始化SSL算法库函数( 加载要用到的算法 )
 
-  mContext = SSL_CTX_new(DTLS_method());
-  assert(mContext);
+  ssl_ctx_ = SSL_CTX_new(DTLS_method());
+  assert(ssl_ctx_);
 
-  int r = SSL_CTX_use_certificate(mContext, mCert);
+  int r = SSL_CTX_use_certificate(ssl_ctx_, mCert);
   assert(r == 1);
 
-  r = SSL_CTX_use_PrivateKey(mContext, privkey);
+  r = SSL_CTX_use_PrivateKey(ssl_ctx_, privkey);
   assert(r == 1);
 
-  SSL_CTX_set_cipher_list(mContext, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
+  SSL_CTX_set_cipher_list(ssl_ctx_, "ALL:!ADH:!LOW:!EXP:!MD5:@STRENGTH");
 
-  SSL_CTX_set_info_callback(mContext, SSLInfoCallback);
+  SSL_CTX_set_info_callback(ssl_ctx_, SSLInfoCallback);
 
-  SSL_CTX_set_verify(mContext, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
+  SSL_CTX_set_verify(ssl_ctx_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT,
                      SSLVerifyCallback);
 
-  SSL_CTX_set_options(mContext, SSL_OP_NO_QUERY_MTU);
-  // SSL_CTX_set_session_cache_mode(mContext, SSL_SESS_CACHE_OFF);
-  // SSL_CTX_set_options(mContext, SSL_OP_NO_TICKET);
+  SSL_CTX_set_options(ssl_ctx_, SSL_OP_NO_QUERY_MTU);
+  // SSL_CTX_set_session_cache_mode(ssl_ctx_, SSL_SESS_CACHE_OFF);
+  // SSL_CTX_set_options(ssl_ctx_, SSL_OP_NO_TICKET);
   // Set SRTP profiles
-  r = SSL_CTX_set_tlsext_use_srtp(mContext, DefaultSrtpProfile);
+  r = SSL_CTX_set_tlsext_use_srtp(ssl_ctx_, DefaultSrtpProfile);
   assert(r == 0);
 
-  SSL_CTX_set_verify_depth(mContext, 2);
-  SSL_CTX_set_read_ahead(mContext, 1);
+  SSL_CTX_set_verify_depth(ssl_ctx_, 2);
+  SSL_CTX_set_read_ahead(ssl_ctx_, 1);
 
   ELOG_DEBUG("DtlsSocketContext created");
 }
 
 DtlsSocketContext::~DtlsSocketContext() {
-  mSocket->close();
-  delete mSocket;
-  mSocket = nullptr;
-  SSL_CTX_free(mContext);
+  dtls_socket_->close();
+  delete dtls_socket_;
+  dtls_socket_ = nullptr;
+  SSL_CTX_free(ssl_ctx_);
 }
 
-void DtlsSocketContext::close() { mSocket->close(); }
+void DtlsSocketContext::close() { dtls_socket_->close(); }
 
 void DtlsSocketContext::Init() {
   ssl_thread_setup();
@@ -311,16 +310,16 @@ void DtlsSocketContext::getMyCertFingerprint(char* fingerprint) {
 }
 
 void DtlsSocketContext::setSrtpProfiles(const char* str) {
-  int r = SSL_CTX_set_tlsext_use_srtp(mContext, str);
+  int r = SSL_CTX_set_tlsext_use_srtp(ssl_ctx_, str);
   assert(r == 0);
 }
 
 void DtlsSocketContext::setCipherSuites(const char* str) {
-  int r = SSL_CTX_set_cipher_list(mContext, str);
+  int r = SSL_CTX_set_cipher_list(ssl_ctx_, str);
   assert(r == 1);
 }
 
-SSL_CTX* DtlsSocketContext::getSSLContext() { return mContext; }
+SSL_CTX* DtlsSocketContext::getSSLContext() { return ssl_ctx_; }
 
 DtlsSocketContext::PacketType DtlsSocketContext::demuxPacket(const unsigned char* data,
                                                              unsigned int len) {
@@ -335,28 +334,28 @@ DtlsSocketContext::PacketType DtlsSocketContext::demuxPacket(const unsigned char
 
 std::string DtlsSocketContext::getFingerprint() const {
   char fprint[100] = {};
-  mSocket->getMyCertFingerprint(fprint);
+  dtls_socket_->getMyCertFingerprint(fprint);
   return std::string(fprint);
 }
 
 void DtlsSocketContext::start() {
   started = true;
-  mSocket->startClient();
+  dtls_socket_->startClient();
 }
 
 void DtlsSocketContext::read(const unsigned char* data, unsigned int len) {
-  mSocket->handlePacketMaybe(data, len);
+  dtls_socket_->handlePacketMaybe(data, len);
 }
 
-void DtlsSocketContext::setDtlsReceiver(DtlsReceiver* recv) { receiver = recv; }
+void DtlsSocketContext::setDtlsReceiver(DtlsReceiver* recv) { dtls_recevier_ = recv; }
 
 void DtlsSocketContext::write(const unsigned char* data, unsigned int len) {
-  if (receiver != NULL) {
-    receiver->onDtlsPacket(this, data, len);
+  if (dtls_recevier_ != NULL) {
+    dtls_recevier_->onDtlsPacket(this, data, len);
   }
 }
 
-void DtlsSocketContext::handleTimeout() { mSocket->handleTimeout(); }
+void DtlsSocketContext::handleTimeout() { dtls_socket_->handleTimeout(); }
 
 static char* Base64Encode(const char* input, int length, bool with_new_line) {
   BIO* bmem = NULL;
@@ -382,13 +381,13 @@ void DtlsSocketContext::handshakeCompleted() {
   char fprint[100];
   SRTP_PROTECTION_PROFILE* srtp_profile;
 
-  if (mSocket->getRemoteFingerprint(fprint)) {
+  if (dtls_socket_->getRemoteFingerprint(fprint)) {
     ELOG_TRACE("Remote fingerprint == %s", fprint);
 
-    bool check = mSocket->checkFingerprint(fprint, strlen(fprint));
+    bool check = dtls_socket_->checkFingerprint(fprint, strlen(fprint));
     ELOG_DEBUG("Fingerprint check == %d", check);
 
-    SrtpSessionKeys* keys = mSocket->getSrtpSessionKeys();
+    SrtpSessionKeys* keys = dtls_socket_->getSrtpSessionKeys();
 
     unsigned char* cKey =
         (unsigned char*)malloc(keys->clientMasterKeyLen + keys->clientMasterSaltLen);
@@ -432,14 +431,14 @@ void DtlsSocketContext::handshakeCompleted() {
     free(sKey);
     delete keys;
 
-    srtp_profile = mSocket->getSrtpProfile();
+    srtp_profile = dtls_socket_->getSrtpProfile();
 
     if (srtp_profile) {
       ELOG_DEBUG("SRTP Extension negotiated profile=%s", srtp_profile->name);
     }
 
-    if (receiver != NULL) {
-      receiver->onHandshakeCompleted(this, clientKey, serverKey, srtp_profile->name);
+    if (dtls_recevier_ != NULL) {
+      dtls_recevier_->onHandshakeCompleted(this, clientKey, serverKey, srtp_profile->name);
     }
   } else {
     ELOG_DEBUG("Peer did not authenticate");
@@ -448,5 +447,5 @@ void DtlsSocketContext::handshakeCompleted() {
 
 void DtlsSocketContext::handshakeFailed(const char* err) {
   ELOG_WARN("DTLS Handshake Failure %s", err);
-  receiver->onHandshakeFailed(this, std::string(err));
+  dtls_recevier_->onHandshakeFailed(this, std::string(err));
 }

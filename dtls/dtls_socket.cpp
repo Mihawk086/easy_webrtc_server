@@ -14,40 +14,40 @@ using std::memcpy;
 int dummy_cb(int d, X509_STORE_CTX* x) { return 1; }
 
 DtlsSocket::DtlsSocket(DtlsSocketContext* socketContext, enum SocketType type)
-    : mSocketContext(socketContext), mSocketType(type), mHandshakeCompleted(false) {
+    : dtls_socket_ctx_(socketContext), socket_type_(type), is_handshake_completted(false) {
   ELOG_DEBUG("Creating Dtls Socket");
-  mSocketContext->setDtlsSocket(this);
-  SSL_CTX* mContext = mSocketContext->getSSLContext();
-  assert(mContext);
-  mSsl = SSL_new(mContext);
-  assert(mSsl != 0);
-  SSL_set_mtu(mSsl, DTLS_MTU);
-  mSsl->ctx = mContext;
-  mSsl->session_ctx = mContext;
+  dtls_socket_ctx_->setDtlsSocket(this);
+  SSL_CTX* ssl_ctx_ = dtls_socket_ctx_->getSSLContext();
+  assert(ssl_ctx_);
+  ssl_ = SSL_new(ssl_ctx_);
+  assert(ssl_ != 0);
+  SSL_set_mtu(ssl_, DTLS_MTU);
+  ssl_->ctx = ssl_ctx_;
+  ssl_->session_ctx = ssl_ctx_;
 
   switch (type) {
     case Client:
-      SSL_set_connect_state(mSsl);
-      // SSL_set_mode(mSsl, SSL_MODE_ENABLE_PARTIAL_WRITE |
+      SSL_set_connect_state(ssl_);
+      // SSL_set_mode(ssl_, SSL_MODE_ENABLE_PARTIAL_WRITE |
       //         SSL_MODE_ACCEPT_MOVING_WRITE_BUFFER);
       break;
     case Server:
-      SSL_set_accept_state(mSsl);
-      SSL_set_verify(mSsl, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, dummy_cb);
+      SSL_set_accept_state(ssl_);
+      SSL_set_verify(ssl_, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, dummy_cb);
       break;
     default:
       assert(0);
   }
   BIO* memBIO1 = BIO_new(BIO_s_mem());
-  mInBio = BIO_new(BIO_f_dwrap());
-  BIO_push(mInBio, memBIO1);
+  in_bio_ = BIO_new(BIO_f_dwrap());
+  BIO_push(in_bio_, memBIO1);
 
   BIO* memBIO2 = BIO_new(BIO_s_mem());
-  mOutBio = BIO_new(BIO_f_dwrap());
-  BIO_push(mOutBio, memBIO2);
+  out_bio_ = BIO_new(BIO_f_dwrap());
+  BIO_push(out_bio_, memBIO2);
 
-  SSL_set_bio(mSsl, mInBio, mOutBio);
-  SSL_accept(mSsl);
+  SSL_set_bio(ssl_, in_bio_, out_bio_);
+  SSL_accept(ssl_);
   ELOG_DEBUG("Dtls Socket created");
 }
 
@@ -55,21 +55,21 @@ DtlsSocket::~DtlsSocket() { close(); }
 
 void DtlsSocket::close() {
   // Properly shutdown the socket and free it - note: this also free's the BIO's
-  if (mSsl != NULL) {
+  if (ssl_ != NULL) {
     ELOG_DEBUG("SSL Shutdown");
-    SSL_shutdown(mSsl);
-    SSL_free(mSsl);
-    mSsl = NULL;
+    SSL_shutdown(ssl_);
+    SSL_free(ssl_);
+    ssl_ = NULL;
   }
 }
 
 void DtlsSocket::startClient() {
-  assert(mSocketType == Client);
+  assert(socket_type_ == Client);
   doHandshakeIteration();
 }
 
 bool DtlsSocket::handlePacketMaybe(const unsigned char* bytes, unsigned int len) {
-  if (mSsl == NULL) {
+  if (ssl_ == NULL) {
     ELOG_WARN("handlePacketMaybe called after DtlsSocket closed: %p", this);
     return false;
   }
@@ -79,14 +79,14 @@ bool DtlsSocket::handlePacketMaybe(const unsigned char* bytes, unsigned int len)
     return false;
   }
 
-  if (mSsl == nullptr) {
+  if (ssl_ == nullptr) {
     return false;
   }
 
-  (void)BIO_reset(mInBio);
-  (void)BIO_reset(mOutBio);
+  (void)BIO_reset(in_bio_);
+  (void)BIO_reset(out_bio_);
 
-  int r = BIO_write(mInBio, bytes, len);
+  int r = BIO_write(in_bio_, bytes, len);
   assert(r == static_cast<int>(len));  // Can't happen
 
   // Note: we must catch any below exceptions--if there are any
@@ -99,57 +99,57 @@ bool DtlsSocket::handlePacketMaybe(const unsigned char* bytes, unsigned int len)
 }
 
 void DtlsSocket::forceRetransmit() {
-  (void)BIO_reset(mInBio);
-  (void)BIO_reset(mOutBio);
-  BIO_ctrl(mInBio, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, 0);
+  (void)BIO_reset(in_bio_);
+  (void)BIO_reset(out_bio_);
+  BIO_ctrl(in_bio_, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, 0);
 
   doHandshakeIteration();
 }
 
 void DtlsSocket::doHandshakeIteration() {
-  std::lock_guard<std::mutex> lock(handshakeMutex_);
+  std::lock_guard<std::mutex> lock(handshake_mutex_);
   char errbuf[1024];
   int sslerr;
 
-  if (mHandshakeCompleted) return;
+  if (is_handshake_completted) return;
 
-  int r = SSL_do_handshake(mSsl);
+  int r = SSL_do_handshake(ssl_);
   errbuf[0] = 0;
   ERR_error_string_n(ERR_peek_error(), errbuf, sizeof(errbuf));
 
   // See what was written
   unsigned char* outBioData;
-  int outBioLen = BIO_get_mem_data(mOutBio, &outBioData);
+  int outBioLen = BIO_get_mem_data(out_bio_, &outBioData);
   if (outBioLen > DTLS_MTU) {
     ELOG_WARN("message: BIO data bigger than MTU - packet could be lost, outBioLen %u, MTU %u",
               outBioLen, DTLS_MTU);
   }
 
   // Now handle handshake errors */
-  switch (sslerr = SSL_get_error(mSsl, r)) {
+  switch (sslerr = SSL_get_error(ssl_, r)) {
     case SSL_ERROR_NONE:
-      mHandshakeCompleted = true;
-      mSocketContext->handshakeCompleted();
+      is_handshake_completted = true;
+      dtls_socket_ctx_->handshakeCompleted();
       break;
     case SSL_ERROR_WANT_READ:
       break;
     default:
       ELOG_ERROR("SSL error %d", sslerr);
 
-      mSocketContext->handshakeFailed(errbuf);
+      dtls_socket_ctx_->handshakeFailed(errbuf);
       // Note: need to fall through to propagate alerts, if any
       break;
   }
 
-  // If mOutBio is now nonzero-length, then we need to write the
+  // If out_bio_ is now nonzero-length, then we need to write the
   // data to the network. TODO(pedro): warning, MTU issues!
   if (outBioLen) {
-    mSocketContext->write(outBioData, outBioLen);
+    dtls_socket_ctx_->write(outBioData, outBioLen);
   }
 }
 
 bool DtlsSocket::getRemoteFingerprint(char* fprint) {
-  X509* x = SSL_get_peer_certificate(mSsl);
+  X509* x = SSL_get_peer_certificate(ssl_);
   if (!x) {  // No certificate
     return false;
   }
@@ -176,17 +176,17 @@ bool DtlsSocket::checkFingerprint(const char* fingerprint, unsigned int len) {
 }
 
 void DtlsSocket::getMyCertFingerprint(char* fingerprint) {
-  mSocketContext->getMyCertFingerprint(fingerprint);
+  dtls_socket_ctx_->getMyCertFingerprint(fingerprint);
 }
 
 SrtpSessionKeys* DtlsSocket::getSrtpSessionKeys() {
   // TODO(pedro): probably an exception candidate
-  assert(mHandshakeCompleted);
+  assert(is_handshake_completted);
 
   SrtpSessionKeys* keys = new SrtpSessionKeys();
 
   unsigned char material[SRTP_MASTER_KEY_LEN << 1];
-  if (!SSL_export_keying_material(mSsl, material, sizeof(material), "EXTRACTOR-dtls_srtp", 19, NULL,
+  if (!SSL_export_keying_material(ssl_, material, sizeof(material), "EXTRACTOR-dtls_srtp", 19, NULL,
                                   0, 0)) {
     return keys;
   }
@@ -211,8 +211,8 @@ SrtpSessionKeys* DtlsSocket::getSrtpSessionKeys() {
 
 SRTP_PROTECTION_PROFILE* DtlsSocket::getSrtpProfile() {
   // TODO(pedro): probably an exception candidate
-  assert(mHandshakeCompleted);
-  return SSL_get_selected_srtp_profile(mSsl);
+  assert(is_handshake_completted);
+  return SSL_get_selected_srtp_profile(ssl_);
 }
 
 // Fingerprint is assumed to be long enough
@@ -239,23 +239,23 @@ void DtlsSocket::computeFingerprint(X509* cert, char* fingerprint) {
 }
 
 void DtlsSocket::handleTimeout() {
-  (void)BIO_reset(mInBio);
-  (void)BIO_reset(mOutBio);
-  if (DTLSv1_handle_timeout(mSsl) > 0) {
+  (void)BIO_reset(in_bio_);
+  (void)BIO_reset(out_bio_);
+  if (DTLSv1_handle_timeout(ssl_) > 0) {
     ELOG_DEBUG("Dtls timeout occurred!");
 
     // See what was written
     unsigned char* outBioData;
-    int outBioLen = BIO_get_mem_data(mOutBio, &outBioData);
+    int outBioLen = BIO_get_mem_data(out_bio_, &outBioData);
     if (outBioLen > DTLS_MTU) {
       ELOG_WARN("message: BIO data bigger than MTU - packet could be lost, outBioLen %u, MTU %u",
                 outBioLen, DTLS_MTU);
     }
 
-    // If mOutBio is now nonzero-length, then we need to write the
+    // If out_bio_ is now nonzero-length, then we need to write the
     // data to the network. TODO(pedro): warning, MTU issues!
     if (outBioLen) {
-      mSocketContext->write(outBioData, outBioLen);
+      dtls_socket_ctx_->write(outBioData, outBioLen);
     }
   }
 }
@@ -263,7 +263,7 @@ void DtlsSocket::handleTimeout() {
 // TODO(pedro): assert(0) into exception, as elsewhere
 void DtlsSocket::createSrtpSessionPolicies(srtp_policy_t& outboundPolicy,
                                            srtp_policy_t& inboundPolicy) {
-  assert(mHandshakeCompleted);
+  assert(is_handshake_completted);
 
   /* we assume that the default profile is in effect, for now */
   srtp_profile_t profile = srtp_profile_aes128_cm_sha1_80;
@@ -330,7 +330,7 @@ void DtlsSocket::createSrtpSessionPolicies(srtp_policy_t& outboundPolicy,
   if (err) assert(0);
   server_policy.next = NULL;
 
-  if (mSocketType == Client) {
+  if (socket_type_ == Client) {
     client_policy.ssrc.type = ssrc_any_outbound;
     outboundPolicy = client_policy;
 
@@ -349,37 +349,3 @@ void DtlsSocket::createSrtpSessionPolicies(srtp_policy_t& outboundPolicy,
   //    memset(server_master_key_and_salt, 0x00, SRTP_MAX_KEY_LEN);
   //    memset(&srtp_key, 0x00, sizeof(srtp_key));
 }
-
-/* ====================================================================
-
-Copyright (c) 2007-2008, Eric Rescorla and Derek MacDonald
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-1. Redistributions of source code must retain the above copyright
-notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright
-notice, this list of conditions and the following disclaimer in the
-documentation and/or other materials provided with the distribution.
-
-3. None of the contributors names may be used to endorse or promote
-products derived from this software without specific prior written
-permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-==================================================================== */
