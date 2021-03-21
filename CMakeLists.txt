@@ -4,18 +4,18 @@ project(webrtc_server)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include)
+#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include)
 
-file(GLOB SRC_LIST ./dtls/*.cpp ./dtls/*.c ./webrtctransport/*.cpp)
+file(GLOB SRC_LIST ./dtls/*.cc ./webrtctransport/*.cpp)
 
 add_library(webrtc ${SRC_LIST})
 
 file(GLOB EXAMPLE_LIST ./main/*.cpp)
 
 set(LINK_LIBRARYS 
-${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libsrtp2.a 
-${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libssl.a 
-${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/lib/libcrypto.a
+srtp2
+ssl 
+crypto
 dl pthread )
 
 set(RTC_LIBRARYS webrtc avcodec avfilter avutil muduo_http muduo_net muduo_base)        

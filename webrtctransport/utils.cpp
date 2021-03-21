@@ -1,9 +1,9 @@
 #define MS_CLASS "Utils::Crypto"
 // #define MS_LOG_DEV
 
-#include "openssl/sha.h"
-
 #include "utils.h"
+
+#include "openssl/sha.h"
 
 namespace Utils {
 /* Static variables. */
@@ -61,7 +61,7 @@ void Crypto::ClassInit() {
   // Create an OpenSSL HMAC_CTX context for HMAC SHA1 calculation.
   // Crypto::hmacSha1Ctx = HMAC_CTX_new();
   if (Crypto::hmacSha1Ctx == nullptr) {
-    Crypto::hmacSha1Ctx = new HMAC_CTX;
+    Crypto::hmacSha1Ctx = HMAC_CTX_new();
   }
 }
 

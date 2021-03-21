@@ -8,10 +8,10 @@
 #include <functional>
 #include <memory>
 
-#include "dtls/dtls_socket.h"
+#include "dtls/rtc_dtls_transport.h"
 #include "srtp_channel.h"
 
-class DtlsTransport : dtls::DtlsReceiver {
+class DtlsTransport : RTC::DtlsTransport::Listener {
  public:
   typedef std::shared_ptr<DtlsTransport> Ptr;
 
@@ -23,27 +23,42 @@ class DtlsTransport : dtls::DtlsReceiver {
   void InputData(char* buf, int len);
   void OutputData(char* buf, int len);
   static bool IsDtlsPacket(const char* buf, int len);
-  std::string GetMyFingerprint() { return dtls_ctx_->getFingerprint(); };
-
-  // override
-  void onHandshakeCompleted(dtls::DtlsSocketContext* ctx, std::string clientKey,
-                            std::string serverKey, std::string srtp_profile) override;
-  void onHandshakeFailed(dtls::DtlsSocketContext* ctx, const std::string& error) override;
-  void onDtlsPacket(dtls::DtlsSocketContext* ctx, const unsigned char* data,
-                    unsigned int len) override;
+  std::string GetMyFingerprint() {
+    auto finger_prints = dtls_transport_->GetLocalFingerprints();
+    for (size_t i = 0; i < finger_prints.size(); i++) {
+      if (finger_prints[i].algorithm == RTC::DtlsTransport::FingerprintAlgorithm::SHA256) {
+        return finger_prints[i].value;
+      }
+    }
+    return "";
+  };
 
   void SetHandshakeCompletedCB(
       std::function<void(std::string clientKey, std::string serverKey)> cb) {
     handshake_completed_callback_ = cb;
   }
   void SetHandshakeFailedCB(std::function<void()> cb) { handshake_failed_callback_ = cb; }
-  void SetOutPutCB(std::function<void(char* buf, int len)> cb) { output_callbacke = cb; }
+  void SetOutPutCB(std::function<void(char* buf, int len)> cb) { output_callback_ = cb; }
+
+  /* Pure virtual methods inherited from RTC::DtlsTransport::Listener. */
+ public:
+  void OnDtlsTransportConnecting(const RTC::DtlsTransport* dtlsTransport) override;
+  void OnDtlsTransportConnected(const RTC::DtlsTransport* dtlsTransport,
+                                RTC::CryptoSuite srtpCryptoSuite, uint8_t* srtpLocalKey,
+                                size_t srtpLocalKeyLen, uint8_t* srtpRemoteKey,
+                                size_t srtpRemoteKeyLen, std::string& remoteCert) override;
+  void OnDtlsTransportFailed(const RTC::DtlsTransport* dtlsTransport) override;
+  void OnDtlsTransportClosed(const RTC::DtlsTransport* dtlsTransport) override;
+  void OnDtlsTransportSendData(const RTC::DtlsTransport* dtlsTransport, const uint8_t* data,
+                               size_t len) override;
+  void OnDtlsTransportApplicationDataReceived(const RTC::DtlsTransport* dtlsTransport,
+                                              const uint8_t* data, size_t len) override;
 
  private:
-  std::shared_ptr<dtls::DtlsSocketContext> dtls_ctx_;
+  std::shared_ptr<RTC::DtlsTransport> dtls_transport_;
   std::function<void(std::string client_key, std::string server_key)> handshake_completed_callback_;
   std::function<void()> handshake_failed_callback_;
-  std::function<void(char* buf, int len)> output_callbacke;
+  std::function<void(char* buf, int len)> output_callback_;
   bool is_server_ = false;
 };
 
