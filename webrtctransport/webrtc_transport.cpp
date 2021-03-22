@@ -5,14 +5,11 @@
 #include "muduo/net/EventLoop.h"
 #include "utils.h"
 
-using namespace erizo;
-
 WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip)
     : loop_(loop_), is_ready_(false) {
   ip_ = ip;
   dtls_transport_.reset(new DtlsTransport(true));
   udp_socket_.reset(new UdpSocket(ip_, loop));
-  srtp_channel_.reset(new SrtpChannel());
   ice_server_.reset(
       new IceServer(Utils::Crypto::GetRandomString(4), Utils::Crypto::GetRandomString(24)));
   udp_socket_->SetReadCallback([this](char* buf, int len, struct sockaddr_in* remote_address) {
@@ -22,9 +19,10 @@ WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip)
   ice_server_->SetSendCB([this](char* buf, int len, struct sockaddr_in* remote_address) {
     this->WritePacket(buf, len, remote_address);
   });
-  dtls_transport_->SetHandshakeCompletedCB([this](std::string client_key, std::string server_key) {
-    this->OnDtlsCompleted(client_key, server_key);
-  });
+  dtls_transport_->SetHandshakeCompletedCB(
+      [this](std::string client_key, std::string server_key, RTC::CryptoSuite srtp_crypto_suite) {
+        this->OnDtlsCompleted(client_key, server_key, srtp_crypto_suite);
+      });
   dtls_transport_->SetOutPutCB([this](char* buf, int len) { this->WritePacket(buf, len); });
   rtp_maker_.SetRtpCallBack([this](char* buf, int len) { this->WritRtpPacket(buf, len); });
 }
@@ -68,8 +66,11 @@ void WebRtcTransport::OnIceServerCompleted() {
   dtls_transport_->Start();
 }
 
-void WebRtcTransport::OnDtlsCompleted(std::string client_key, std::string server_key) {
-  srtp_channel_->setRtpParams(client_key, server_key);
+void WebRtcTransport::OnDtlsCompleted(std::string client_key, std::string server_key,
+                                      RTC::CryptoSuite srtp_crypto_suite) {
+  srtp_session_.reset(new RTC::SrtpSession(RTC::SrtpSession::Type::OUTBOUND, srtp_crypto_suite,
+                                           (uint8_t*)client_key.c_str(), client_key.size()));
+  std::cout << (int)srtp_crypto_suite << std::endl;
   is_ready_ = true;
 }
 
@@ -100,14 +101,17 @@ void WebRtcTransport::WritePacket(char* buf, int len) {
 }
 
 void WebRtcTransport::WritRtpPacket(char* buf, int len) {
+  memcpy(protect_buf_, buf, len);
+  const uint8_t* p = (uint8_t*)protect_buf_;
+  size_t tmp_len = len;
+  bool ret = false;
   if (is_ready_) {
-    memcpy(protect_buf_, buf, len);
-    int length = len;
-    srtp_channel_->protectRtp(protect_buf_, &length);
-    if (udp_socket_) {
-      udp_socket_->Send(protect_buf_, length, remote_socket_address_);
-    }
+    ret = srtp_session_->EncryptRtp(&p, &tmp_len);
   }
+  if (udp_socket_) {
+    udp_socket_->Send((char*)p, tmp_len, remote_socket_address_);
+  }
+  return;
 }
 
 void WebRtcTransport::WriteH264Frame(char* buf, int len, uint32_t timestamp) {

@@ -8,6 +8,7 @@
 #include "muduo/net/http/HttpRequest.h"
 #include "muduo/net/http/HttpResponse.h"
 #include "muduo/net/http/HttpServer.h"
+#include "srtp/srtp_session.h"
 #include "webrtctransport/utils.h"
 #include "webrtctransport/webrtc_transport.h"
 
@@ -24,8 +25,9 @@ int main(int argc, char* argv[]) {
   }
   FFmpegSrc::GetInsatance()->Start();
   Utils::Crypto::ClassInit();
-  // dtls::DtlsSocketContext::Init();
   RTC::DtlsTransport::ClassInit();
+  RTC::DepLibSRTP::ClassInit();
+  RTC::SrtpSession::ClassInit();
 
   int threads_num = 0;
   EventLoop loop;

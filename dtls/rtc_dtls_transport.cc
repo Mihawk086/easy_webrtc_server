@@ -12,19 +12,7 @@
 #include <cstdio>   // std::sprintf(), std::fopen()
 #include <cstring>  // std::memcpy(), std::strcmp()
 
-#define MS_TRACE()
-#define LOG_OPENSSL_ERROR(fmt)
-#define LOG_OPENSSL_ERROR(fmt)
-#define MS_ERROR(fmt, args...)
-#define MS_THROW_ERROR(fmt)
-#define MS_DUMP(fmt, args...)
-#define MS_DEBUG_2TAGS(tag1, tag2, args...)
-#define MS_WARN_2TAGS(tag1, tag2, args...)
-#define MS_DEBUG_TAG(tag, args...)
-#define MS_ASSERT(con, log)
-#define MS_ABORT(fmt)
-#define MS_WARN_TAG(tag, args...)
-#define MS_DEBUG_DEV(tag, args...)
+#include "log/logger.h"
 
 typedef struct {
   long tv_sec;

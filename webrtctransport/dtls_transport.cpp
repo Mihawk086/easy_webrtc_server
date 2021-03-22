@@ -44,7 +44,7 @@ void DtlsTransport::Close() {}
 void DtlsTransport::OnDtlsTransportConnecting(const RTC::DtlsTransport *dtlsTransport) {}
 
 void DtlsTransport::OnDtlsTransportConnected(const RTC::DtlsTransport *dtlsTransport,
-                                             RTC::CryptoSuite srtpCryptoSuite,
+                                             RTC::CryptoSuite srtp_crypto_suite,
                                              uint8_t *srtpLocalKey, size_t srtpLocalKeyLen,
                                              uint8_t *srtpRemoteKey, size_t srtpRemoteKeyLen,
                                              std::string &remoteCert) {
@@ -53,14 +53,14 @@ void DtlsTransport::OnDtlsTransportConnected(const RTC::DtlsTransport *dtlsTrans
   std::string server_key;
   server_key.assign((char *)srtpLocalKey, srtpLocalKeyLen);
   client_key.assign((char *)srtpRemoteKey, srtpRemoteKeyLen);
-  client_key = Base64Encode(client_key, false);
-  server_key = Base64Encode(server_key, false);
+  // client_key = Base64Encode(client_key, false);
+  // server_key = Base64Encode(server_key, false);
   if (is_server_) {
     // If we are server, we swap the keys
     client_key.swap(server_key);
   }
   if (handshake_completed_callback_) {
-    handshake_completed_callback_(client_key, server_key);
+    handshake_completed_callback_(client_key, server_key, srtp_crypto_suite);
   }
 }
 

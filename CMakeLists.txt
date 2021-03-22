@@ -6,7 +6,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 #include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include)
 
-file(GLOB SRC_LIST ./dtls/*.cc ./webrtctransport/*.cpp)
+file(GLOB SRC_LIST ./dtls/*.cc  ./srtp/*.cc ./webrtctransport/*.cpp)
 
 add_library(webrtc ${SRC_LIST})
 

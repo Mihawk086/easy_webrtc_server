@@ -6,6 +6,7 @@
 #include "dtls_transport.h"
 #include "ice_server.h"
 #include "rtp_maker.h"
+#include "srtp/srtp_session.h"
 #include "stun_packet.h"
 #include "udp_socket.h"
 
@@ -23,7 +24,8 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport> {
   void Start();
   std::string GetLocalSdp();
   void OnIceServerCompleted();
-  void OnDtlsCompleted(std::string client_key, std::string server_key);
+  void OnDtlsCompleted(std::string client_key, std::string server_key,
+                       RTC::CryptoSuite srtp_crypto_suite);
 
   void OnInputDataPacket(char* buf, int len, struct sockaddr_in* remote_address);
   void WritePacket(char* buf, int len, struct sockaddr_in* remote_address);
@@ -34,7 +36,7 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport> {
  private:
   IceServer::Ptr ice_server_;
   DtlsTransport::Ptr dtls_transport_;
-  std::shared_ptr<erizo::SrtpChannel> srtp_channel_;
+  std::shared_ptr<RTC::SrtpSession> srtp_session_;
 
   UdpSocket::Ptr udp_socket_;
   muduo::net::EventLoop* loop_;

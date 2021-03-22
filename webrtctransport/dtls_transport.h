@@ -9,7 +9,6 @@
 #include <memory>
 
 #include "dtls/rtc_dtls_transport.h"
-#include "srtp_channel.h"
 
 class DtlsTransport : RTC::DtlsTransport::Listener {
  public:
@@ -34,7 +33,7 @@ class DtlsTransport : RTC::DtlsTransport::Listener {
   };
 
   void SetHandshakeCompletedCB(
-      std::function<void(std::string clientKey, std::string serverKey)> cb) {
+      std::function<void(std::string clientKey, std::string serverKey, RTC::CryptoSuite)> cb) {
     handshake_completed_callback_ = cb;
   }
   void SetHandshakeFailedCB(std::function<void()> cb) { handshake_failed_callback_ = cb; }
@@ -56,7 +55,9 @@ class DtlsTransport : RTC::DtlsTransport::Listener {
 
  private:
   std::shared_ptr<RTC::DtlsTransport> dtls_transport_;
-  std::function<void(std::string client_key, std::string server_key)> handshake_completed_callback_;
+  std::function<void(std::string client_key, std::string server_key,
+                     RTC::CryptoSuite srtp_crypto_suite)>
+      handshake_completed_callback_;
   std::function<void()> handshake_failed_callback_;
   std::function<void(char* buf, int len)> output_callback_;
   bool is_server_ = false;
