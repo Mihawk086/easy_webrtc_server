@@ -4,6 +4,7 @@
 #include "srtp_session.h"
 
 #include <cstring>  // std::memset(), std::memcpy()
+#include <iostream>
 
 #include "log/logger.h"
 
@@ -67,9 +68,9 @@ void SrtpSession::ClassInit() {
   // Set libsrtp event handler.
   srtp_err_status_t err =
       srtp_install_event_handler(static_cast<srtp_event_handler_func_t*>(OnSrtpEvent));
-
   if (DepLibSRTP::IsError(err)) {
     MS_THROW_ERROR("srtp_install_event_handler() failed: %s", DepLibSRTP::GetErrorString(err));
+    std::cout << "srtp_install_event_handler() failed :" << DepLibSRTP::GetErrorString(err);
   }
 }
 
@@ -162,9 +163,12 @@ SrtpSession::SrtpSession(Type type, CryptoSuite cryptoSuite, uint8_t* key, size_
 
   // Set the SRTP session.
   srtp_err_status_t err = srtp_create(&this->session, &policy);
-
-  if (DepLibSRTP::IsError(err))
+  if (DepLibSRTP::IsError(err)) {
+    is_init = false;
     MS_THROW_ERROR("srtp_create() failed: %s", DepLibSRTP::GetErrorString(err));
+  } else {
+    is_init = true;
+  }
 }
 
 SrtpSession::~SrtpSession() {
@@ -180,7 +184,9 @@ SrtpSession::~SrtpSession() {
 
 bool SrtpSession::EncryptRtp(const uint8_t** data, size_t* len) {
   MS_TRACE();
-
+  if (!is_init) {
+    return false;
+  }
   // Ensure that the resulting SRTP packet fits into the encrypt buffer.
   if (*len + SRTP_MAX_TRAILER_LEN > EncryptBufferSize) {
     MS_WARN_TAG(srtp, "cannot encrypt RTP packet, size too big (%zu bytes)", *len);

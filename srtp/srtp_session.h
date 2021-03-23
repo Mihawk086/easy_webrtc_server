@@ -49,6 +49,7 @@ class SrtpSession {
  private:
   // Allocated by this.
   srtp_t session{nullptr};
+  bool is_init = false;
 };
 }  // namespace RTC
 
