@@ -6,24 +6,6 @@
 
 #include <iostream>
 
-static std::string Base64Encode(const std::string &input, bool with_new_line) {
-  BIO *bmem = NULL;
-  BIO *b64 = NULL;
-  BUF_MEM *bptr = NULL;
-  b64 = BIO_new(BIO_f_base64());
-  if (!with_new_line) {
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-  }
-  bmem = BIO_new(BIO_s_mem());
-  b64 = BIO_push(b64, bmem);
-  BIO_write(b64, input.c_str(), input.length());
-  BIO_flush(b64);
-  BIO_get_mem_ptr(b64, &bptr);
-  std::string result(bptr->data, bptr->length);
-  BIO_free_all(b64);
-  return result;
-}
-
 DtlsTransport::DtlsTransport(bool is_server) : is_server_(is_server) {
   dtls_transport_.reset(new RTC::DtlsTransport(this));
 }
@@ -53,8 +35,6 @@ void DtlsTransport::OnDtlsTransportConnected(const RTC::DtlsTransport *dtlsTrans
   std::string server_key;
   server_key.assign((char *)srtpLocalKey, srtpLocalKeyLen);
   client_key.assign((char *)srtpRemoteKey, srtpRemoteKeyLen);
-  // client_key = Base64Encode(client_key, false);
-  // server_key = Base64Encode(server_key, false);
   if (is_server_) {
     // If we are server, we swap the keys
     client_key.swap(server_key);

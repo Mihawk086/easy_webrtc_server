@@ -2,19 +2,21 @@
 简单的webrtc流媒体服务器
 联系方式：qq864733526
 # 依赖库
-```  
-sudo apt install libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavresample-dev libavutil-dev libpostproc-dev   libswresample-dev libswscale-dev    
+``` 
+openssl 1.1以上 
+sudo apt install libavcodec-dev libavdevice-dev libavfilter-dev libavformat-dev libavresample-dev libavutil-dev libpostproc-dev libswresample-dev libswscale-dev    
 muduo网络库：https://github.com/chenshuo/muduo
+srtp https://github.com/cisco/libsrtp。srtp必须--enable-openssl
 ```  
 # 目录说明
-* dtls 封装openssl  
-* thirdparty 第三方库，srtp2、muduo和openssl版本1.02的头文件和静态库  
+* dtls 封装openssl,实现dtls握手  
+* srtp srtp加密  
 * webrtchtml webrtc视频播放的网页 
 * webrtctransport webrtc协议，包括stun，dtls，srtp  
 * main ffmpeg编码带有日期时间的h264流，http信令服务器交换sdp  
 
 # 使用说明
-ubuntu18.04安装依赖库 
+ubuntu18.04安装依赖库openssl1.1以上、srtp、ffmpeg
 安装muduo网络库
 ```  
 mkdir build  
@@ -22,7 +24,8 @@ cd build
 cmake ..  
 make  
 ```  
-运行程序，第一个参数为IP地址 ./testwebrtc IP地址   
+运行程序，第一个参数为IP地址：
+./testwebrtc 服务器IP地址   
 打开webrtchtml/index.html 输入IP地址，播放视频 
 
 # 原理说明

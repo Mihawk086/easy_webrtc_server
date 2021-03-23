@@ -12,6 +12,7 @@ WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip)
   udp_socket_.reset(new UdpSocket(ip_, loop));
   ice_server_.reset(
       new IceServer(Utils::Crypto::GetRandomString(4), Utils::Crypto::GetRandomString(24)));
+
   udp_socket_->SetReadCallback([this](char* buf, int len, struct sockaddr_in* remote_address) {
     this->OnInputDataPacket(buf, len, remote_address);
   });
