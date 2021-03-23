@@ -9,13 +9,11 @@ add_compile_options(-g)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-#include_directories(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include)
-
-file(GLOB SRC_LIST ./dtls/*.cc  ./srtp/*.cc ./webrtctransport/*.cpp)
+file(GLOB SRC_LIST ./dtls/*.cc  ./srtp/*.cc ./webrtctransport/*.cc ./ffmpeg_src/*.cc)
 
 add_library(webrtc ${SRC_LIST})
 
-file(GLOB EXAMPLE_LIST ./main/*.cpp)
+file(GLOB EXAMPLE_LIST ./main/*.cc)
 
 set(LINK_LIBRARYS 
 srtp2
@@ -25,7 +23,7 @@ dl pthread )
 
 set(RTC_LIBRARYS webrtc avcodec avfilter avutil muduo_http muduo_net muduo_base)        
 
-add_executable(testWebrtc ${EXAMPLE_LIST})
+add_executable(test_webrtc ${EXAMPLE_LIST})
 
-target_link_libraries(testWebrtc ${RTC_LIBRARYS} ${LINK_LIBRARYS})
+target_link_libraries(test_webrtc ${RTC_LIBRARYS} ${LINK_LIBRARYS})
 
