@@ -26,7 +26,7 @@ cmake ..
 make  
 ```  
 运行程序，第一个参数为IP地址：
-./test_webrtc 服务器IP地址   
+./example 服务器IP地址   
 打开webrtchtml/index.html 输入IP地址，播放视频 
 
 # 原理说明

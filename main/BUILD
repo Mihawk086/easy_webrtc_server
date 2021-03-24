@@ -3,7 +3,7 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library","cc_import")
 package(default_visibility = ["//visibility:public"])
 
 cc_binary(
-    name = "test_webrtc",
+    name = "example",
     srcs = glob([
         "*.cc",
     ]),
