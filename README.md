@@ -10,10 +10,8 @@ muduo网络库：https://github.com/chenshuo/muduo
 srtp https://github.com/cisco/libsrtp。srtp必须--enable-openssl
 ```  
 # 目录说明
-* dtls 封装openssl,实现dtls握手  
-* srtp srtp加密  
 * webrtchtml webrtc视频播放的网页 
-* webrtctransport webrtc协议，包括stun，dtls，srtp  
+* rtc webrtc协议，包括stun，dtls，srtp  
 * main ffmpeg编码带有日期时间的h264流，http信令服务器交换sdp  
 
 # 使用说明
@@ -26,7 +24,13 @@ cmake ..
 make  
 ```  
 运行程序，第一个参数为IP地址：
-./example 服务器IP地址   
+./ffmpeg_src_example 服务器IP地址   
+打开webrtchtml/index.html 输入IP地址，播放视频 
+
+运行程序，第一个参数为IP地址：
+./rtp_src_example 服务器IP地址
+命令ffmpeg -f dshow -i video="USB2.0 PC CAMERA" -pix_fmt yuv420p  -vcodec libx264 -profile baseline -tune zerolatency  -g 25 -f rtp rtp://192.168.2.128:56000
+将摄像头的rtp流推到服务器，ip改为自己服务器的地址，port为56000   
 打开webrtchtml/index.html 输入IP地址，播放视频 
 
 # 原理说明
