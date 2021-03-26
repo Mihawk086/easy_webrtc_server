@@ -17,7 +17,7 @@ typedef std::function<void(char* buf, int len, struct sockaddr_in* remoteAddr)>
 class UdpSocket : public std::enable_shared_from_this<UdpSocket> {
  public:
   typedef std::shared_ptr<UdpSocket> Ptr;
-  UdpSocket(std::string ip, muduo::net::EventLoop* loop);
+  UdpSocket(muduo::net::EventLoop* loop, std::string ip, uint16_t port = 0);
   ~UdpSocket();
   void Start();
   int Send(char* buf, int len, const struct sockaddr_in& remoteAddr);

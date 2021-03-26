@@ -14,6 +14,7 @@ class RtpMaker {
   ~RtpMaker();
   void InputH264Frame(char* buf, int len, uint32_t timestamp);
   void Setssrc(uint32_t ssrc) { ssrc_ = ssrc; };
+  static void SetRtpHeaderSsrc(char* buf, uint32_t ssrc);
 
  private:
   Listener* listener_;

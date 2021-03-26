@@ -8,7 +8,7 @@ WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip)
     : loop_(loop_), is_ready_(false) {
   ip_ = ip;
   dtls_transport_.reset(new RTC::DtlsTransport(this));
-  udp_socket_.reset(new UdpSocket(ip_, loop));
+  udp_socket_.reset(new UdpSocket(loop, ip_, 0));
   ice_server_.reset(new RTC::IceServer(this, Utils::Crypto::GetRandomString(4),
                                        Utils::Crypto::GetRandomString(24)));
   rtp_maker_.reset(new RtpMaker(this));
@@ -149,4 +149,8 @@ void WebRtcTransport::OnDtlsTransportSendData(const RTC::DtlsTransport* dtlsTran
 void WebRtcTransport::OnDtlsTransportApplicationDataReceived(
     const RTC::DtlsTransport* dtlsTransport, const uint8_t* data, size_t len) {}
 
-void WebRtcTransport::SendRtpData(char* data, int len) { EncryptAndSendRtpPacket(data, len); };
+void WebRtcTransport::SendRtpData(char* data, int len) {
+  if (is_ready_) {
+    EncryptAndSendRtpPacket(data, len);
+  }
+};

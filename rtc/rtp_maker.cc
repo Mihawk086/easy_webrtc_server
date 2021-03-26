@@ -25,7 +25,7 @@ typedef struct rtp_header {
   uint32_t csrc[16];
 } rtp_header;
 
-static void SetVideoRtpHeader(char* pbuffer, uint32_t dwssrc, uint32_t dwtimestample,
+void SetVideoRtpHeader(char* pbuffer, uint32_t dwssrc, uint32_t dwtimestample,
                               uint16_t dwseqnum, bool marker) {
   rtp_header* rtp_hdr = (rtp_header*)pbuffer;
   memset(rtp_hdr, 0, RTP_HEADER_SIZE);
@@ -95,4 +95,10 @@ void RtpMaker::InputH264Frame(char* buf, int len, uint32_t timestamp) {
       }
     }
   }
+}
+
+void RtpMaker::SetRtpHeaderSsrc(char* buf, uint32_t ssrc) 
+{
+  rtp_header* rtp_hdr = (rtp_header*)buf;
+  rtp_hdr->ssrc = htonl(ssrc);
 }

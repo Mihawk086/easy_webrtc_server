@@ -10,7 +10,8 @@
 using namespace muduo;
 using namespace muduo::net;
 
-UdpSocket::UdpSocket(std::string ip, EventLoop* loop) : loop_(loop), ip_(ip) {}
+UdpSocket::UdpSocket(muduo::net::EventLoop* loop, std::string ip, uint16_t port)
+    : loop_(loop), ip_(ip), port_(port) {}
 
 UdpSocket::~UdpSocket() {
   int fd = channel_->fd();
@@ -25,9 +26,11 @@ void UdpSocket::Start() {
   struct sockaddr_in addr = {0};
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = inet_addr(ip_.c_str());
-  addr.sin_port = 0;
-  ::bind(fd_, (struct sockaddr*)&addr, sizeof addr);
-
+  addr.sin_port = ::htons(port_);
+  int ret = ::bind(fd_, (struct sockaddr*)&addr, sizeof addr);
+  if (ret != 0) {
+    std::cout << "bind udp error" << std::endl;
+  }
   {
     struct sockaddr addr;
     struct sockaddr_in* addr_v4;

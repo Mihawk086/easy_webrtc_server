@@ -13,17 +13,21 @@ file(GLOB RTC_LIST ./rtc/*.cc ./ffmpeg_src/*.cc ./common/*.cc)
 
 add_library(rtc ${RTC_LIST})
 
-file(GLOB EXAMPLE_LIST ./main/example.cc)
-
 set(LINK_LIBRARYS 
 srtp2
 ssl 
 crypto
 dl pthread )
 
-set(RTC_LIBRARYS rtc avcodec avfilter avutil muduo_http muduo_net muduo_base)
-        
-add_executable(example ${EXAMPLE_LIST})
+set(RTC_LIBRARYS rtc  muduo_http muduo_net muduo_base)
 
-target_link_libraries(example ${RTC_LIBRARYS} ${LINK_LIBRARYS})
+set(FFMPEG_LIBRARYS avcodec avfilter avutil)
+        
+add_executable(ffmpeg_src_example ./main/ffmpeg_src_example.cc)
+
+add_executable(rtp_src_example ./main/rtp_src_example.cc)
+
+target_link_libraries(ffmpeg_src_example ${RTC_LIBRARYS} ${FFMPEG_LIBRARYS} ${LINK_LIBRARYS})
+
+target_link_libraries(rtp_src_example ${RTC_LIBRARYS} ${LINK_LIBRARYS})
 
