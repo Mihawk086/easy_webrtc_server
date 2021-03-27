@@ -39,12 +39,10 @@ function start() {
   
     if (window.XMLHttpRequest)
     {
-	    //  IE7+, Firefox, Chrome, Opera, Safari ä¯ÀÀÆ÷Ö´ÐÐ´úÂë
 	    xmlhttp=new XMLHttpRequest();
     }
     else
     {   
-	    // IE6, IE5 ä¯ÀÀÆ÷Ö´ÐÐ´úÂë
 	    xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
     }
     var addr = "http://" + IP + ":8000" + "/webrtc";
@@ -84,7 +82,6 @@ function onSetLocalDescriptionSuccess() {
 function gotoffer(offer) {
   
   trace('Offer from server \n' + offer);
-  //??????offer sdp????????RTCSessionDescription????
   var desc = new RTCSessionDescription();
   desc.sdp = offer;
   desc.type = 'offer';
@@ -102,13 +99,11 @@ function gotDescription2(desc) {
   // Provisional answer, set a=inactive & set sdp type to pranswer.
   /*desc.sdp = desc.sdp.replace(/a=recvonly/g, 'a=inactive');
   desc.type = 'pranswer';*/
-  
   pc2.setLocalDescription(desc).then(
     onSetLocalDescriptionSuccess,
     onSetLocalDescriptionError
   );
   trace('Pranswer from pc2 \n' + desc.sdp);
-  
   //conn.send(JSON.stringify(desc));
   // send desc.sdp to server
 }
