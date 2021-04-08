@@ -27,6 +27,7 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
 
   void Start();
   std::string GetLocalSdp();
+  std::string GetPublishSdp();
   void OnIceServerCompleted();
   void OnDtlsCompleted(std::string client_key, std::string server_key,
                        RTC::SrtpSession::CryptoSuite srtp_crypto_suite);

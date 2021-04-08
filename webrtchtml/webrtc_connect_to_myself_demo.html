@@ -14,8 +14,8 @@ Remote: <br>
   var iceServer = null;
 
   // 创建PeerConnection实例 (参数为null则没有iceserver，即使没有stunserver和turnserver，仍可在局域网下通讯)
-  var pc = new webkitRTCPeerConnection(iceServer);
-  var pc2 = new webkitRTCPeerConnection(iceServer);
+  var pc = new window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+  var pc2 = new window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
   // 发送ICE候选到其他客户端
   pc.onicecandidate = function(event){
     if (event.candidate !== null) {
@@ -31,7 +31,7 @@ Remote: <br>
 
   // 如果检测到媒体流连接到本地，将其绑定到一个video标签上输出
   pc2.onaddstream = function(event){
-    document.getElementById('remoteVideo').src = URL.createObjectURL(event.stream);
+    document.getElementById('remoteVideo').srcObject  = event.stream;
   };
 
   // 发送offer和answer的函数，发送本地session描述
@@ -55,7 +55,7 @@ Remote: <br>
     "video": true
   }, function(stream){
     //绑定本地媒体流到video标签用于输出
-    document.getElementById('localVideo').src = URL.createObjectURL(stream);
+    document.getElementById('localVideo').srcObject = stream;
     //向PeerConnection中加入需要发送的流
     pc.addStream(stream);
     //如果是发起方则发送一个offer信令

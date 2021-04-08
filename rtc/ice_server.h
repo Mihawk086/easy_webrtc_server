@@ -52,7 +52,7 @@ class IceServer {
   }
 
  private:
-  void HandleTuple(RTC::TransportTuple* tuple, bool hasUseCandidate);
+  void HandleTuple(RTC::TransportTuple* tuple);
 
  private:
   // Passed by argument.

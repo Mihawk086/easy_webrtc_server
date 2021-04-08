@@ -27,7 +27,11 @@ add_executable(ffmpeg_src_example ./main/ffmpeg_src_example.cc)
 
 add_executable(rtp_src_example ./main/rtp_src_example.cc)
 
+add_executable(publish_example ./main/publish_example.cc)
+
 target_link_libraries(ffmpeg_src_example ${RTC_LIBRARYS} ${FFMPEG_LIBRARYS} ${LINK_LIBRARYS})
 
 target_link_libraries(rtp_src_example ${RTC_LIBRARYS} ${LINK_LIBRARYS})
+
+target_link_libraries(publish_example ${RTC_LIBRARYS} ${LINK_LIBRARYS})
 

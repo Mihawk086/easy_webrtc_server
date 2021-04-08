@@ -177,8 +177,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, RTC::TransportTuple* 
       delete response;
 
       // Handle the tuple.
-      HandleTuple(tuple, packet->HasUseCandidate());
-
+      // HandleTuple(tuple, packet->HasUseCandidate());
+      HandleTuple(tuple);
       break;
     }
 
@@ -202,8 +202,8 @@ void IceServer::ProcessStunPacket(RTC::StunPacket* packet, RTC::TransportTuple* 
   }
 }
 
-void IceServer::HandleTuple(RTC::TransportTuple* tuple, bool hasUseCandidate) {
-  if (!hasUseCandidate) {
+void IceServer::HandleTuple(RTC::TransportTuple* tuple) {
+  if (this->state != IceState::COMPLETED) {
     this->state = IceState::COMPLETED;
     if (this->listener) {
       this->listener->OnIceServerSelectedTuple(this, tuple);

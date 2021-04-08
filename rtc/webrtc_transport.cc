@@ -34,11 +34,37 @@ std::string WebRtcTransport::GetLocalSdp() {
   }
   sprintf(szsdp,
           "v=0\r\no=- 1495799811084970 1495799811084970 IN IP4 %s\r\ns=Streaming Test\r\nt=0 0\r\n"
-          "a=group:BUNDLE video\r\na=msid-semantic: WMS janus\r\n"
-          "m=video 1 RTP/SAVPF 96\r\nc=IN IP4 %s\r\na=mid:video\r\na=sendonly\r\na=rtcp-mux\r\n"
+          "a=group:BUNDLE 0\r\na=msid-semantic: WMS janus\r\n"
+          "m=video 1 RTP/SAVPF 96\r\nc=IN IP4 %s\r\na=mid:0\r\na=sendonly\r\na=rtcp-mux\r\n"
           "a=ice-ufrag:%s\r\n"
           "a=ice-pwd:%s\r\na=ice-options:trickle\r\na=fingerprint:sha-256 "
           "%s\r\na=setup:actpass\r\na=connection:new\r\n"
+          "a=rtpmap:96 H264/90000\r\n"
+          "a=ssrc:%d cname:janusvideo\r\n"
+          "a=ssrc:%d msid:janus janusv0\r\n"
+          "a=ssrc:%d mslabel:janus\r\n"
+          "a=ssrc:%d label:janusv0\r\n"
+          "a=candidate:%s 1 udp %u %s %d typ %s\r\n",
+          ip_.c_str(), ip_.c_str(), ice_server_->GetUsernameFragment().c_str(),
+          ice_server_->GetPassword().c_str(), GetSHA256Fingerprint().c_str(), nssrc, nssrc, nssrc,
+          nssrc, "4", 12345678, ip_.c_str(), nport, "host");
+  return std::string(szsdp);
+}
+
+std::string WebRtcTransport::GetPublishSdp() {
+  char szsdp[1024 * 10] = {0};
+  int nssrc = 12345678;
+  uint16_t nport = 0;
+  if (udp_socket_) {
+    nport = udp_socket_->GetPort();
+  }
+  sprintf(szsdp,
+          "v=0\r\no=- 1495799811084970 1495799811084970 IN IP4 %s\r\ns=Streaming Test\r\nt=0 0\r\n"
+          "a=group:BUNDLE 0\r\na=msid-semantic: WMS janus\r\n"
+          "m=video 1 RTP/SAVPF 96\r\nc=IN IP4 %s\r\na=mid:0\r\na=reconly\r\na=rtcp-mux\r\n"
+          "a=ice-ufrag:%s\r\n"
+          "a=ice-pwd:%s\r\na=ice-options:trickle\r\na=fingerprint:sha-256 "
+          "%s\r\na=setup:passive\r\na=connection:new\r\n"
           "a=rtpmap:96 H264/90000\r\n"
           "a=ssrc:%d cname:janusvideo\r\n"
           "a=ssrc:%d msid:janus janusv0\r\n"
