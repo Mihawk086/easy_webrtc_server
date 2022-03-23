@@ -14,8 +14,7 @@ cc_library(
         "//visibility:public",
     ],
     deps = [
-      "//log",
-      "//webrtctransport"
+      "//rtc",
     ],
 )
 
