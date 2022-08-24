@@ -9,7 +9,7 @@ add_compile_options(-g)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-file(GLOB RTC_LIST ./rtc/*.cc ./ffmpeg_src/*.cc ./common/*.cc)
+file(GLOB RTC_LIST ./rtc/*.cc ./common/*.cc)
 
 add_library(rtc ${RTC_LIST})
 
@@ -20,18 +20,9 @@ crypto
 dl pthread )
 
 set(RTC_LIBRARYS rtc  muduo_http muduo_net muduo_base)
-
-set(FFMPEG_LIBRARYS avcodec avfilter avutil)
-        
-add_executable(ffmpeg_src_example ./main/ffmpeg_src_example.cc)
-
+     
 add_executable(rtp_src_example ./main/rtp_src_example.cc)
-
-add_executable(publish_example ./main/publish_example.cc)
-
-target_link_libraries(ffmpeg_src_example ${RTC_LIBRARYS} ${FFMPEG_LIBRARYS} ${LINK_LIBRARYS})
 
 target_link_libraries(rtp_src_example ${RTC_LIBRARYS} ${LINK_LIBRARYS})
 
-target_link_libraries(publish_example ${RTC_LIBRARYS} ${LINK_LIBRARYS})
 

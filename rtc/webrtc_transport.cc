@@ -8,10 +8,9 @@ WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip)
     : loop_(loop_), is_ready_(false) {
   ip_ = ip;
   dtls_transport_.reset(new RTC::DtlsTransport(this));
-  udp_socket_.reset(new UdpSocket(loop, ip_, 0));
+  udp_socket_.reset(new UdpSocket(loop, "0.0.0.0", 10000));
   ice_server_.reset(new RTC::IceServer(this, Utils::Crypto::GetRandomString(4),
                                        Utils::Crypto::GetRandomString(24)));
-  rtp_maker_.reset(new RtpMaker(this));
   udp_socket_->SetReadCallback([this](char* buf, int len, struct sockaddr_in* remote_address) {
     this->OnInputDataPacket(buf, len, remote_address);
   });
@@ -39,32 +38,6 @@ std::string WebRtcTransport::GetLocalSdp() {
           "a=ice-ufrag:%s\r\n"
           "a=ice-pwd:%s\r\na=ice-options:trickle\r\na=fingerprint:sha-256 "
           "%s\r\na=setup:actpass\r\na=connection:new\r\n"
-          "a=rtpmap:96 H264/90000\r\n"
-          "a=ssrc:%d cname:janusvideo\r\n"
-          "a=ssrc:%d msid:janus janusv0\r\n"
-          "a=ssrc:%d mslabel:janus\r\n"
-          "a=ssrc:%d label:janusv0\r\n"
-          "a=candidate:%s 1 udp %u %s %d typ %s\r\n",
-          ip_.c_str(), ip_.c_str(), ice_server_->GetUsernameFragment().c_str(),
-          ice_server_->GetPassword().c_str(), GetSHA256Fingerprint().c_str(), nssrc, nssrc, nssrc,
-          nssrc, "4", 12345678, ip_.c_str(), nport, "host");
-  return std::string(szsdp);
-}
-
-std::string WebRtcTransport::GetPublishSdp() {
-  char szsdp[1024 * 10] = {0};
-  int nssrc = 12345678;
-  uint16_t nport = 0;
-  if (udp_socket_) {
-    nport = udp_socket_->GetPort();
-  }
-  sprintf(szsdp,
-          "v=0\r\no=- 1495799811084970 1495799811084970 IN IP4 %s\r\ns=Streaming Test\r\nt=0 0\r\n"
-          "a=group:BUNDLE 0\r\na=msid-semantic: WMS janus\r\n"
-          "m=video 1 RTP/SAVPF 96\r\nc=IN IP4 %s\r\na=mid:0\r\na=reconly\r\na=rtcp-mux\r\n"
-          "a=ice-ufrag:%s\r\n"
-          "a=ice-pwd:%s\r\na=ice-options:trickle\r\na=fingerprint:sha-256 "
-          "%s\r\na=setup:passive\r\na=connection:new\r\n"
           "a=rtpmap:96 H264/90000\r\n"
           "a=ssrc:%d cname:janusvideo\r\n"
           "a=ssrc:%d msid:janus janusv0\r\n"
@@ -115,12 +88,6 @@ void WebRtcTransport::EncryptAndSendRtpPacket(char* buf, int len) {
     udp_socket_->Send((char*)p, tmp_len, remote_socket_address_);
   }
   return;
-}
-
-void WebRtcTransport::WriteH264Frame(char* buf, int len, uint32_t timestamp) {
-  if (is_ready_) {
-    rtp_maker_->InputH264Frame(buf, len, timestamp);
-  }
 }
 
 std::string WebRtcTransport::GetSHA256Fingerprint() {
@@ -174,9 +141,3 @@ void WebRtcTransport::OnDtlsTransportSendData(const RTC::DtlsTransport* dtlsTran
 
 void WebRtcTransport::OnDtlsTransportApplicationDataReceived(
     const RTC::DtlsTransport* dtlsTransport, const uint8_t* data, size_t len) {}
-
-void WebRtcTransport::SendRtpData(char* data, int len) {
-  if (is_ready_) {
-    EncryptAndSendRtpPacket(data, len);
-  }
-};

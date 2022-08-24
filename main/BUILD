@@ -26,32 +26,4 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "ffmpeg_src_example",
-    linkopts = [
-        "-L /usr/local/lib",
-        "-lavcodec",
-        "-lavfilter",
-        "-lavutil",
-        "-lsrtp2",
-        "-lssl",
-        "-lcrypto",
-        "-lmuduo_http",
-        "-lmuduo_net",
-        "-lmuduo_base",
-        "-lpthread",
-    ],
-    srcs = glob([
-        "ffmpeg_src_example.cc",
-    ]),
-    visibility = [
-        "//visibility:public",
-    ],
-    deps = [
-      "//ffmpeg_src",
-      "//common",
-      "//rtc",
-    ],
-)
-
  

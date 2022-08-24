@@ -6,7 +6,6 @@
 #include "common/utils.h"
 #include "dtls_transport.h"
 #include "ice_server.h"
-#include "rtp_maker.h"
 #include "srtp_session.h"
 #include "stun_packet.h"
 #include "udp_socket.h"
@@ -19,15 +18,13 @@ class EventLoop;
 
 class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
                         RTC::DtlsTransport::Listener,
-                        RTC::IceServer::Listener,
-                        RtpMaker::Listener {
+                        RTC::IceServer::Listener {
  public:
   WebRtcTransport(muduo::net::EventLoop* loop, std::string ip);
   ~WebRtcTransport();
 
   void Start();
   std::string GetLocalSdp();
-  std::string GetPublishSdp();
   void OnIceServerCompleted();
   void OnDtlsCompleted(std::string client_key, std::string server_key,
                        RTC::SrtpSession::CryptoSuite srtp_crypto_suite);
@@ -36,7 +33,6 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   void SendUdpPacket(char* buf, int len, struct sockaddr_in* remote_address);
   void SendUdpPacket(char* buf, int len);
   void EncryptAndSendRtpPacket(char* buf, int len);
-  void WriteH264Frame(char* buf, int len, uint32_t timestamp);
   std::string GetSHA256Fingerprint();
 
  public:
@@ -62,15 +58,10 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   void OnDtlsTransportApplicationDataReceived(const RTC::DtlsTransport* dtlsTransport,
                                               const uint8_t* data, size_t len) override;
 
- public:
-  void SendRtpData(char* data, int len) override;
-
- public:
  private:
   std::shared_ptr<RTC::IceServer> ice_server_;
   std::shared_ptr<RTC::DtlsTransport> dtls_transport_;
   std::shared_ptr<RTC::SrtpSession> srtp_session_;
-  std::shared_ptr<RtpMaker> rtp_maker_;
   UdpSocket::Ptr udp_socket_;
   muduo::net::EventLoop* loop_;
 
