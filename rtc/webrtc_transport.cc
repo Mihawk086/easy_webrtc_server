@@ -4,33 +4,20 @@
 
 #include "muduo/net/EventLoop.h"
 
-WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip)
-    : loop_(loop_), is_ready_(false) {
-  ip_ = ip;
+WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip, uint16_t port)
+    : loop_(loop_), is_ready_(false), ip_(ip), port_(port) {
   dtls_transport_.reset(new RTC::DtlsTransport(this));
-  udp_socket_.reset(new UdpSocket(loop, "0.0.0.0", 10000));
   ice_server_.reset(new RTC::IceServer(this, Utils::Crypto::GetRandomString(4),
                                        Utils::Crypto::GetRandomString(24)));
-  udp_socket_->SetReadCallback([this](char* buf, int len, struct sockaddr_in* remote_address) {
-    this->OnInputDataPacket(buf, len, remote_address);
-  });
 }
 
 WebRtcTransport::~WebRtcTransport() {}
 
-void WebRtcTransport::Start() {
-  if (udp_socket_) {
-    udp_socket_->Start();
-  }
-}
+void WebRtcTransport::Start() {}
 
 std::string WebRtcTransport::GetLocalSdp() {
   char szsdp[1024 * 10] = {0};
   int nssrc = 12345678;
-  uint16_t nport = 0;
-  if (udp_socket_) {
-    nport = udp_socket_->GetPort();
-  }
   sprintf(szsdp,
           "v=0\r\no=- 1495799811084970 1495799811084970 IN IP4 %s\r\ns=Streaming Test\r\nt=0 0\r\n"
           "a=group:BUNDLE 0\r\na=msid-semantic: WMS janus\r\n"
@@ -46,47 +33,42 @@ std::string WebRtcTransport::GetLocalSdp() {
           "a=candidate:%s 1 udp %u %s %d typ %s\r\n",
           ip_.c_str(), ip_.c_str(), ice_server_->GetUsernameFragment().c_str(),
           ice_server_->GetPassword().c_str(), GetSHA256Fingerprint().c_str(), nssrc, nssrc, nssrc,
-          nssrc, "4", 12345678, ip_.c_str(), nport, "host");
+          nssrc, "4", 12345678, ip_.c_str(), port_, "host");
   return std::string(szsdp);
 }
 
-void WebRtcTransport::OnInputDataPacket(char* buf, int len, struct sockaddr_in* remote_address) {
-  if (RTC::StunPacket::IsStun((const uint8_t*)buf, len)) {
-    RTC::StunPacket* packet = RTC::StunPacket::Parse((const uint8_t*)buf, len);
+void WebRtcTransport::OnInputDataPacket(const uint8_t* buf, size_t len,
+                                        const struct sockaddr_in& remote_address) {
+  if (RTC::StunPacket::IsStun(buf, len)) {
+    RTC::StunPacket* packet = RTC::StunPacket::Parse(buf, len);
     if (packet == nullptr) {
       std::cout << "parse stun error" << std::endl;
       return;
     }
-    ice_server_->ProcessStunPacket(packet, remote_address);
+    ice_server_->ProcessStunPacket(packet, const_cast<sockaddr_in*>(&remote_address));
   }
-  if (RTC::DtlsTransport::IsDtls((uint8_t*)buf, len)) {
-    dtls_transport_->ProcessDtlsData((uint8_t*)buf, len);
-  }
-}
-
-void WebRtcTransport::SendUdpPacket(char* buf, int len, struct sockaddr_in* remote_address) {
-  if (udp_socket_) {
-    udp_socket_->Send(buf, len, *remote_address);
+  if (RTC::DtlsTransport::IsDtls(buf, len)) {
+    dtls_transport_->ProcessDtlsData(buf, len);
   }
 }
 
-void WebRtcTransport::SendUdpPacket(char* buf, int len) {
-  if (udp_socket_) {
-    udp_socket_->Send(buf, len, remote_socket_address_);
+bool WebRtcTransport::SendPacket(const uint8_t* data, size_t len,
+                                 const struct sockaddr_in& remote_address) {
+  if (transport_) {
+    return transport_->SendPacket(data, len, remote_address);
   }
+  return false;
 }
 
-void WebRtcTransport::EncryptAndSendRtpPacket(char* buf, int len) {
-  memcpy(protect_buf_, buf, len);
+void WebRtcTransport::EncryptAndSendRtpPacket(const uint8_t* data, size_t len) {
+  memcpy(protect_buf_, data, len);
   const uint8_t* p = (uint8_t*)protect_buf_;
   size_t tmp_len = len;
   bool ret = false;
-  if (is_ready_) {
+  if (is_ready_.load()) {
     ret = srtp_session_->EncryptRtp(&p, &tmp_len);
   }
-  if (udp_socket_) {
-    udp_socket_->Send((char*)p, tmp_len, remote_socket_address_);
-  }
+  SendPacket(p, tmp_len, remote_socket_address_);
   return;
 }
 
@@ -103,7 +85,7 @@ std::string WebRtcTransport::GetSHA256Fingerprint() {
 void WebRtcTransport::OnIceServerSendStunPacket(const RTC::IceServer* iceServer,
                                                 const RTC::StunPacket* packet,
                                                 RTC::TransportTuple* tuple) {
-  SendUdpPacket((char*)packet->GetData(), (int)packet->GetSize(), tuple);
+  SendPacket(packet->GetData(), packet->GetSize(), *tuple);
 }
 
 void WebRtcTransport::OnIceServerSelectedTuple(const RTC::IceServer* iceServer,
@@ -125,9 +107,9 @@ void WebRtcTransport::OnDtlsTransportConnected(const RTC::DtlsTransport* dtlsTra
                                                uint8_t* srtpLocalKey, size_t srtpLocalKeyLen,
                                                uint8_t* srtpRemoteKey, size_t srtpRemoteKeyLen,
                                                std::string& remoteCert) {
-  is_ready_ = true;
   this->srtp_session_.reset(new RTC::SrtpSession(RTC::SrtpSession::Type::OUTBOUND, srtpCryptoSuite,
                                                  srtpLocalKey, srtpLocalKeyLen));
+  is_ready_ = true;
 }
 
 void WebRtcTransport::OnDtlsTransportFailed(const RTC::DtlsTransport* dtlsTransport) {}
@@ -136,7 +118,7 @@ void WebRtcTransport::OnDtlsTransportClosed(const RTC::DtlsTransport* dtlsTransp
 
 void WebRtcTransport::OnDtlsTransportSendData(const RTC::DtlsTransport* dtlsTransport,
                                               const uint8_t* data, size_t len) {
-  SendUdpPacket((char*)data, (int)len);
+  SendPacket(data, len, remote_socket_address_);
 }
 
 void WebRtcTransport::OnDtlsTransportApplicationDataReceived(

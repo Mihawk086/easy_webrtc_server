@@ -1,14 +1,16 @@
 #pragma once
 
+#include <atomic>
 #include <memory>
 #include <string>
 
 #include "common/utils.h"
 #include "dtls_transport.h"
 #include "ice_server.h"
+#include "net/udp_socket.h"
 #include "srtp_session.h"
 #include "stun_packet.h"
-#include "udp_socket.h"
+#include "transport_interface.h"
 
 namespace muduo {
 namespace net {
@@ -20,19 +22,20 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
                         RTC::DtlsTransport::Listener,
                         RTC::IceServer::Listener {
  public:
-  WebRtcTransport(muduo::net::EventLoop* loop, std::string ip);
+  WebRtcTransport(muduo::net::EventLoop* loop, std::string ip, uint16_t port);
   ~WebRtcTransport();
 
   void Start();
   std::string GetLocalSdp();
+  std::string GetidentifyID() { return ice_server_->GetUsernameFragment(); }
+  void SetTransport(TransportInterface* transport) { transport_ = transport; }
   void OnIceServerCompleted();
   void OnDtlsCompleted(std::string client_key, std::string server_key,
                        RTC::SrtpSession::CryptoSuite srtp_crypto_suite);
 
-  void OnInputDataPacket(char* buf, int len, struct sockaddr_in* remote_address);
-  void SendUdpPacket(char* buf, int len, struct sockaddr_in* remote_address);
-  void SendUdpPacket(char* buf, int len);
-  void EncryptAndSendRtpPacket(char* buf, int len);
+  void OnInputDataPacket(const uint8_t* buf, size_t len, const struct sockaddr_in& remote_address);
+  bool SendPacket(const uint8_t* data, size_t len, const struct sockaddr_in& remote_address);
+  void EncryptAndSendRtpPacket(const uint8_t* data, size_t len);
   std::string GetSHA256Fingerprint();
 
  public:
@@ -62,11 +65,12 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   std::shared_ptr<RTC::IceServer> ice_server_;
   std::shared_ptr<RTC::DtlsTransport> dtls_transport_;
   std::shared_ptr<RTC::SrtpSession> srtp_session_;
-  UdpSocket::Ptr udp_socket_;
+  TransportInterface* transport_;
   muduo::net::EventLoop* loop_;
 
   char protect_buf_[65536];
-  bool is_ready_;
+  std::atomic<bool> is_ready_;
   std::string ip_;
+  uint16_t port_;
   struct sockaddr_in remote_socket_address_;
 };
