@@ -55,7 +55,9 @@ class UdpSession : public TransportInterface {
   UdpSession(EventLoop* loop, const std::string& ip, uint16_t port)
       : loop_(loop), socket_(loop, ip, port) {}
 
-  bool SendPacket(const uint8_t* data, size_t len, const struct sockaddr_in& remote_address) {}
+  bool SendPacket(const uint8_t* data, size_t len, const struct sockaddr_in& remote_address) {
+    socket_.Send(data, len, remote_address);
+  }
 
  public:
   UdpSocket socket_;
@@ -117,11 +119,21 @@ class UdpServer {
 };
 
 int main(int argc, char* argv[]) {
-  // if (fork() == 0) {
-  //   execlp("ffmpeg", "ffmpeg", "-f", "lavfi", "-i", "testsrc=duration=120:size=1280x720:rate=30",
-  //          "-f", "rtp", "rtp://127.0.0.1:56000", NULL);
-  //   return 0;
-  // }
+  if (fork() == 0) {
+    execlp("ffmpeg", "ffmpeg", "-re", "-f", "lavfi", "-i", "testsrc2=size=640*480:rate=25",
+           "-vcodec", "libx264", "-profile:v", "baseline", "-f", "rtp", "rtp://127.0.0.1:56000",
+           NULL);
+    return 0;
+  }
+  // ffmpeg -re -f lavfi -i testsrc2=size=640*480:rate=25 -vcodec libx264 -profile:v baseline -f rtp
+  // rtp://127.0.0.1:56000
+
+  std::string ip("127.0.0.1");
+  uint16_t port = 10000;
+  if (argc == 3) {
+    ip = argv[1];
+    port = atoi(argv[2]);
+  }
 
   Utils::Crypto::ClassInit();
   RTC::DtlsTransport::ClassInit();
@@ -140,18 +152,18 @@ int main(int argc, char* argv[]) {
       });
   rtp_recieve_udp_socket.Start();
 
-  UdpServer udp_server(&loop, "0.0.0.0", 10000);
+  UdpServer udp_server(&loop, "0.0.0.0", port);
   udp_server.Start();
 
   int threads_num = 0;
-  HttpServer http_server(&loop, InetAddress(8088), "webrtc", TcpServer::kReusePort);
-  http_server.setHttpCallback([&loop](const HttpRequest& req, HttpResponse* resp) {
+  HttpServer http_server(&loop, InetAddress(8000), "webrtc", TcpServer::kReusePort);
+  http_server.setHttpCallback([&loop, port, ip](const HttpRequest& req, HttpResponse* resp) {
     if (req.path() == "/webrtc") {
       resp->setStatusCode(HttpResponse::k200Ok);
       resp->setStatusMessage("OK");
       resp->setContentType("text/plain");
       resp->addHeader("Access-Control-Allow-Origin", "*");
-      std::shared_ptr<WebRtcTransport> rtc_session(new WebRtcTransport(&loop, "127.0.0.1", 10000));
+      std::shared_ptr<WebRtcTransport> rtc_session(new WebRtcTransport(&loop, ip, port));
       g_rtc_sessions.insert(std::make_pair(rtc_session->GetidentifyID(), rtc_session));
       resp->setBody(rtc_session->GetLocalSdp());
       std::cout << rtc_session->GetLocalSdp() << std::endl;
