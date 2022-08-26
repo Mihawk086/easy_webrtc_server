@@ -65,12 +65,12 @@ class Transport : public TransportInterface {
 int main(int argc, char* argv[]) {
   if (fork() == 0) {
     execlp("ffmpeg", "ffmpeg", "-re", "-f", "lavfi", "-i", "testsrc2=size=640*480:rate=25",
-           "-vcodec", "libx264", "-profile:v", "baseline", "-f", "rtp", "rtp://127.0.0.1:56000",
-           NULL);
+           "-vcodec", "libx264", "-profile:v", "baseline", "-keyint_min", "60", "-g", "60",
+           "-sc_threshold", "0", "-f", "rtp", "rtp://127.0.0.1:56000", NULL);
     return 0;
   }
-  // ffmpeg -re -f lavfi -i testsrc2=size=640*480:rate=25 -vcodec libx264 -profile:v baseline -f
-  // rtp rtp://127.0.0.1:56000
+  // ffmpeg -re -f lavfi -i testsrc2=size=640*480:rate=25 -vcodec libx264 -profile:v baseline
+  // -keyint_min 60 -g 60 -sc_threshold 0 -f rtp rtp://127.0.0.1:56000
 
   std::string ip("127.0.0.1");
   uint16_t port = 10000;
@@ -87,7 +87,8 @@ int main(int argc, char* argv[]) {
 
   UdpServer rtp_recieve_server(&loop, muduo::net::InetAddress("127.0.0.1", 56000), "rtp_server");
   UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", 10000), "rtc_server");
-  HttpServer http_server(&loop, muduo::net::InetAddress("0.0.0.0", 8000), "webrtc", TcpServer::kReusePort);
+  HttpServer http_server(&loop, muduo::net::InetAddress("0.0.0.0", 8000), "http_server",
+                         TcpServer::kReusePort);
 
   rtp_recieve_server.SetPacketCallback([](UdpServer* server, const uint8_t* buf, size_t len,
                                           const muduo::net::InetAddress& peer_addr,
