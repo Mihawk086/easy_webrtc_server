@@ -7,7 +7,6 @@
 #include "common/utils.h"
 #include "dtls_transport.h"
 #include "ice_server.h"
-#include "net/udp_socket.h"
 #include "srtp_session.h"
 #include "stun_packet.h"
 #include "transport_interface.h"
@@ -28,7 +27,7 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   void Start();
   std::string GetLocalSdp();
   std::string GetidentifyID() { return ice_server_->GetUsernameFragment(); }
-  void SetTransport(TransportInterface* transport) { transport_ = transport; }
+  void SetTransport(std::shared_ptr<TransportInterface> transport) { transport_ = transport; }
   void OnIceServerCompleted();
   void OnDtlsCompleted(std::string client_key, std::string server_key,
                        RTC::SrtpSession::CryptoSuite srtp_crypto_suite);
@@ -65,7 +64,7 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   std::shared_ptr<RTC::IceServer> ice_server_;
   std::shared_ptr<RTC::DtlsTransport> dtls_transport_;
   std::shared_ptr<RTC::SrtpSession> srtp_session_;
-  TransportInterface* transport_;
+  std::shared_ptr<TransportInterface> transport_;
   muduo::net::EventLoop* loop_;
 
   char protect_buf_[65536];

@@ -8,7 +8,8 @@
 #include "muduo/net/http/HttpRequest.h"
 #include "muduo/net/http/HttpResponse.h"
 #include "muduo/net/http/HttpServer.h"
-#include "net/udp_socket.h"
+#include "net/udp_connection.h"
+#include "net/udp_server.h"
 #include "rtc/dtls_transport.h"
 #include "rtc/srtp_session.h"
 #include "rtc/stun_packet.h"
@@ -50,72 +51,15 @@ std::vector<std::string> Split(const string& s, const char* delim) {
   return ret;
 }
 
-class UdpSession : public TransportInterface {
+class Transport : public TransportInterface {
  public:
-  UdpSession(EventLoop* loop, const std::string& ip, uint16_t port)
-      : loop_(loop), socket_(loop, ip, port) {}
-
+  Transport(const std::shared_ptr<UdpConnection>& con) : con_(con) {}
   bool SendPacket(const uint8_t* data, size_t len, const struct sockaddr_in& remote_address) {
-    socket_.Send(data, len, remote_address);
-  }
-
- public:
-  UdpSocket socket_;
-
- private:
-  EventLoop* loop_;
-};
-
-class UdpServer {
- public:
-  UdpServer(EventLoop* loop, const std::string& ip, uint16_t port)
-      : socket_(loop, ip, port), loop_(loop) {
-    socket_.SetReadCallback(
-        [this](const uint8_t* buf, size_t len, const struct sockaddr_in& remote_address) {
-          this->ReadPacket(buf, len, remote_address);
-        });
-  }
-  void Start() { socket_.Start(); }
-  void ReadPacket(const uint8_t* buf, size_t len, const struct sockaddr_in& remote_address) {
-    if (RTC::StunPacket::IsStun(buf, len)) {
-      RTC::StunPacket* packet = RTC::StunPacket::Parse(buf, len);
-      if (packet == nullptr) {
-        std::cout << "parse stun error" << std::endl;
-        return;
-      }
-
-      std::shared_ptr<UdpSession> udp_session;
-      std::string key = ::inet_ntoa(remote_address.sin_addr) + std::string(":") +
-                        std::to_string(remote_address.sin_port);
-      if (auto it = udp_sessions_.find(key); it != udp_sessions_.end()) {
-        udp_session = it->second;
-      } else {
-        auto session =
-            std::shared_ptr<UdpSession>(new UdpSession(loop_, socket_.GetIP(), socket_.GetPort()));
-        udp_sessions_.insert(std::make_pair(key, session));
-        udp_session = session;
-      }
-
-      auto vec = Split(packet->GetUsername(), ":");
-      std::string use_name = vec[0];
-      if (auto it = g_rtc_sessions.find(use_name); it != g_rtc_sessions.end()) {
-        udp_session->socket_.BindRemote(remote_address);
-        udp_session->socket_.SetReadCallback(
-            [rtc_session = it->second](const uint8_t* data, size_t len,
-                                       const struct sockaddr_in& remote_address) {
-              rtc_session->OnInputDataPacket(data, len, remote_address);
-            });
-        it->second->SetTransport(udp_session.get());
-        udp_session->socket_.Start();
-        it->second->OnInputDataPacket(buf, len, remote_address);
-      }
-    }
+    con_->Send(data, len);
   }
 
  private:
-  std::map<std::string, std::shared_ptr<UdpSession>> udp_sessions_;
-  UdpSocket socket_;
-  EventLoop* loop_;
+  std::shared_ptr<UdpConnection> con_;
 };
 
 int main(int argc, char* argv[]) {
@@ -125,8 +69,8 @@ int main(int argc, char* argv[]) {
            NULL);
     return 0;
   }
-  // ffmpeg -re -f lavfi -i testsrc2=size=640*480:rate=25 -vcodec libx264 -profile:v baseline -f rtp
-  // rtp://127.0.0.1:56000
+  // ffmpeg -re -f lavfi -i testsrc2=size=640*480:rate=25 -vcodec libx264 -profile:v baseline -f
+  // rtp rtp://127.0.0.1:56000
 
   std::string ip("127.0.0.1");
   uint16_t port = 10000;
@@ -141,21 +85,54 @@ int main(int argc, char* argv[]) {
   RTC::SrtpSession::ClassInit();
   EventLoop loop;
 
-  UdpSocket rtp_recieve_udp_socket(&loop, "127.0.0.1", 56000);
-  rtp_recieve_udp_socket.SetReadCallback(
-      [](const uint8_t* buf, size_t len, const struct sockaddr_in& remote_addr) {
-        rtp_header* rtp_hdr = (rtp_header*)buf;
-        rtp_hdr->ssrc = htonl(12345678);
-        for (auto& session : g_rtc_sessions) {
-          session.second->EncryptAndSendRtpPacket(buf, len);
-        }
-      });
-  rtp_recieve_udp_socket.Start();
+  UdpServer rtp_recieve_server(&loop, muduo::net::InetAddress("127.0.0.1", 56000), "rtp_server");
+  UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", 10000), "rtc_server");
+  rtp_recieve_server.SetPacketCallback([](UdpServer* server, const uint8_t* buf, size_t len,
+                                          const muduo::net::InetAddress& peer_addr,
+                                          muduo::Timestamp timestamp) {
+    rtp_header* rtp_hdr = (rtp_header*)buf;
+    rtp_hdr->ssrc = htonl(12345678);
+    for (auto& session : g_rtc_sessions) {
+      session.second->EncryptAndSendRtpPacket(buf, len);
+    }
+  });
+  rtc_server.SetPacketCallback([](UdpServer* server, const uint8_t* buf, size_t len,
+                                  const muduo::net::InetAddress& peer_addr,
+                                  muduo::Timestamp timestamp) {
+    if (!RTC::StunPacket::IsStun(buf, len)) {
+      std::cout << "receive not stun packet" << std::endl;
+      return;
+    }
+    RTC::StunPacket* packet = RTC::StunPacket::Parse(buf, len);
+    if (packet == nullptr) {
+      std::cout << "parse stun error" << std::endl;
+      return;
+    }
+    auto vec = Split(packet->GetUsername(), ":");
+    std::string use_name = vec[0];
+    auto it = g_rtc_sessions.find(use_name);
+    if (it == g_rtc_sessions.end()) {
+      std::cout << "no rtc session" << std::endl;
+      return;
+    }
+    auto connection = server->GetOrCreatConnection(peer_addr);
+    if (!connection) {
+      std::cout << "get connection error" << std::endl;
+    }
+    connection->SetPacketCallback(
+        [rtc_session = it->second](const std::shared_ptr<UdpConnection>& con, const uint8_t* buf,
+                                   size_t len, const muduo::net::InetAddress& peer_addr,
+                                   muduo::Timestamp) {
+          struct sockaddr_in remote_sockaddr_in = *(struct sockaddr_in*)peer_addr.getSockAddr();
+          rtc_session->OnInputDataPacket(buf, len, remote_sockaddr_in);
+        });
+    connection->Start();
+    struct sockaddr_in remote_sockaddr_in = *(struct sockaddr_in*)peer_addr.getSockAddr();
+    it->second->OnInputDataPacket(buf, len, remote_sockaddr_in);
+    auto transport = std::shared_ptr<Transport>(new Transport(connection));
+    it->second->SetTransport(transport);
+  });
 
-  UdpServer udp_server(&loop, "0.0.0.0", port);
-  udp_server.Start();
-
-  int threads_num = 0;
   HttpServer http_server(&loop, InetAddress(8000), "webrtc", TcpServer::kReusePort);
   http_server.setHttpCallback([&loop, port, ip](const HttpRequest& req, HttpResponse* resp) {
     if (req.path() == "/webrtc") {
@@ -169,8 +146,10 @@ int main(int argc, char* argv[]) {
       std::cout << rtc_session->GetLocalSdp() << std::endl;
     }
   });
-
-  http_server.setThreadNum(threads_num);
-  http_server.start();
+  loop.runInLoop([&]() {
+    rtp_recieve_server.Start();
+    rtc_server.Start();
+    http_server.start();
+  });
   loop.loop();
 }
