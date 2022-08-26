@@ -87,6 +87,8 @@ int main(int argc, char* argv[]) {
 
   UdpServer rtp_recieve_server(&loop, muduo::net::InetAddress("127.0.0.1", 56000), "rtp_server");
   UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", 10000), "rtc_server");
+  HttpServer http_server(&loop, muduo::net::InetAddress("0.0.0.0", 8000), "webrtc", TcpServer::kReusePort);
+
   rtp_recieve_server.SetPacketCallback([](UdpServer* server, const uint8_t* buf, size_t len,
                                           const muduo::net::InetAddress& peer_addr,
                                           muduo::Timestamp timestamp) {
@@ -133,7 +135,6 @@ int main(int argc, char* argv[]) {
     it->second->SetTransport(transport);
   });
 
-  HttpServer http_server(&loop, InetAddress(8000), "webrtc", TcpServer::kReusePort);
   http_server.setHttpCallback([&loop, port, ip](const HttpRequest& req, HttpResponse* resp) {
     if (req.path() == "/webrtc") {
       resp->setStatusCode(HttpResponse::k200Ok);
