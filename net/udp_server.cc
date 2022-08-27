@@ -19,11 +19,11 @@ UdpServer::UdpServer(EventLoop* loop, const InetAddress& listen_addr, const std:
   size_ = BUF_SIZE;
   buf_ = new char[size_];
   int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
-  socket_ = std::make_unique<Socket>(fd);
+  socket_ = std::unique_ptr<Socket>(new Socket(fd));
   socket_->setReuseAddr(true);
   socket_->setReusePort(true);
   socket_->bindAddress(listen_addr);
-  channel_ = std::make_unique<Channel>(loop, socket_->fd());
+  channel_ = std::unique_ptr<Channel>(new Channel(loop, socket_->fd()));
   channel_->setReadCallback(std::bind(&UdpServer::HandleRead, this, _1));
 }
 

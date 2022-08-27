@@ -23,6 +23,7 @@ cc_binary(
     deps = [
       "//common",
       "//rtc",
+      "//net"
     ],
 )
 

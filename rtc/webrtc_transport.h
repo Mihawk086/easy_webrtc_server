@@ -11,23 +11,17 @@
 #include "stun_packet.h"
 #include "transport_interface.h"
 
-namespace muduo {
-namespace net {
-class EventLoop;
-}
-}  // namespace muduo
-
 class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
                         RTC::DtlsTransport::Listener,
                         RTC::IceServer::Listener {
  public:
-  WebRtcTransport(muduo::net::EventLoop* loop, std::string ip, uint16_t port);
+  WebRtcTransport(std::string ip, uint16_t port);
   ~WebRtcTransport();
 
   void Start();
   std::string GetLocalSdp();
   std::string GetidentifyID() { return ice_server_->GetUsernameFragment(); }
-  void SetTransport(std::shared_ptr<TransportInterface> transport) { transport_ = transport; }
+  void SetNetworkTransport(std::shared_ptr<TransportInterface> transport) { transport_ = transport; }
   void OnIceServerCompleted();
   void OnDtlsCompleted(std::string client_key, std::string server_key,
                        RTC::SrtpSession::CryptoSuite srtp_crypto_suite);
@@ -37,7 +31,7 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   void EncryptAndSendRtpPacket(const uint8_t* data, size_t len);
   std::string GetSHA256Fingerprint();
 
- public:
+ private:
   void OnIceServerSendStunPacket(const RTC::IceServer* iceServer, const RTC::StunPacket* packet,
                                  RTC::TransportTuple* tuple) override;
   void OnIceServerSelectedTuple(const RTC::IceServer* iceServer,
@@ -46,7 +40,7 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   void OnIceServerCompleted(const RTC::IceServer* iceServer) override;
   void OnIceServerDisconnected(const RTC::IceServer* iceServer) override;
 
- public:
+ private:
   void OnDtlsTransportConnecting(const RTC::DtlsTransport* dtlsTransport) override;
   void OnDtlsTransportConnected(const RTC::DtlsTransport* dtlsTransport,
                                 RTC::SrtpSession::CryptoSuite srtpCryptoSuite,
@@ -65,7 +59,6 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   std::shared_ptr<RTC::DtlsTransport> dtls_transport_;
   std::shared_ptr<RTC::SrtpSession> srtp_session_;
   std::shared_ptr<TransportInterface> transport_;
-  muduo::net::EventLoop* loop_;
 
   char protect_buf_[65536];
   std::atomic<bool> is_ready_;

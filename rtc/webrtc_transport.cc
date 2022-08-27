@@ -2,10 +2,8 @@
 
 #include <iostream>
 
-#include "muduo/net/EventLoop.h"
-
-WebRtcTransport::WebRtcTransport(muduo::net::EventLoop* loop, std::string ip, uint16_t port)
-    : loop_(loop_), is_ready_(false), ip_(ip), port_(port) {
+WebRtcTransport::WebRtcTransport(std::string ip, uint16_t port)
+    : is_ready_(false), ip_(ip), port_(port) {
   dtls_transport_.reset(new RTC::DtlsTransport(this));
   ice_server_.reset(new RTC::IceServer(this, Utils::Crypto::GetRandomString(4),
                                        Utils::Crypto::GetRandomString(24)));
