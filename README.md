@@ -3,7 +3,12 @@
 联系方式：qq864733526
 微信：Mihawk086
 # 依赖库
-* sudo apt-get install -y libssl-dev   
+* sudo apt-get install -y \
+    libssl-dev \
+    libboost-all-dev \
+		libavutil-dev \
+		libavformat-dev \
+		libavcodec-dev  
 * muduo网络库：https://github.com/chenshuo/muduo
 * srtp https://github.com/cisco/libsrtp
  
@@ -11,11 +16,11 @@
 * webrtchtml webrtc视频播放的网页 
 * rtc webrtc协议栈，包括stun，dtls，srtp  
 * net 网络传输封装  
-* example rtp_src_example，转发rtp例子，直接将56000的udp端口接收到的rtp流通过webrtc协议转发
+* example rtp_src_example，转发rtp例子，打开h264文件，打包成rtp通过webrtc协议转发
 
 # 使用说明
-ubuntu18.04安装依赖库openssl1.1以上、srtp、ffmpeg
-安装muduo网络库
+ubuntu20.04安装依赖库openssl1.1以上、srtp、ffmpeg、muduo，srtp需要--enable-openssl
+详细安装过程参考Dockerfile
 ```
 mkdir build  
 cd build   
@@ -36,4 +41,4 @@ make
 * 前端通过candidate获取ip地址和端口号，通过udp协议连接到服务器的。  
 * 服务器收到udp报文，先后通过类UdpSocket接收报文；StunPacket和IceServer解析stun协议，此处的Stun协议解析，只要收到stun request，验证账户密码成功，就认为连接成功。
 * stun协议交互成功后，通过DtlsTransport进行dtls握手；交换密钥后就可以初始化SrtpChannel。此处没有通过签名验证客户端的证书，所以省略了前端返回sdp的步骤。  
-* FFmpeg生成h264流通过RtpMaker生成rtp流，通过SrtpChannel加密，通过UdpSocket发送，前端就可以看到视频。  
+* 读取h264码流文件，通过ffmpeg生成rtp流，通过SrtpChannel加密，通过UdpSocket发送，前端就可以看到视频。  

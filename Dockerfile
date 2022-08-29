@@ -11,7 +11,7 @@ RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list &
 RUN apt-get -y update && \
 	apt-get install -y \
 		libssl-dev \
-    	libboost-all-dev \
+    libboost-all-dev \
 		libavutil-dev \
 		libavformat-dev \
 		libavcodec-dev \
