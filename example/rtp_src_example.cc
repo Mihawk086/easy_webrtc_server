@@ -1,8 +1,17 @@
+extern "C" {
+#include <libavformat/avformat.h>
+#include <libavutil/timestamp.h>
+}
+#include <signal.h>
+#include <sys/prctl.h>
+
 #include <atomic>
+#include <chrono>
 #include <cstdio>
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <thread>
 
 #include "common/utils.h"
 #include "muduo/base/Logging.h"
@@ -115,9 +124,10 @@ class WebRTCSessionFactory {
       auto it = rtc_sessions.find(key);
       if (it == rtc_sessions.end()) {
         ptr = nullptr;
+        return ptr;
       }
       ptr = it->second;
-    }
+        }
     return ptr;
   }
   void GetAllReadyWebRTCSession(std::vector<std::shared_ptr<WebRTCSession>>* sessions) {
@@ -137,13 +147,180 @@ class WebRTCSessionFactory {
   std::map<std::string, std::shared_ptr<WebRTCSession>> rtc_sessions;
 };
 
-int main(int argc, char* argv[]) {
-  if (fork() == 0) {
-    execlp("ffmpeg", "ffmpeg", "-re", "-f", "lavfi", "-i", "testsrc2=size=640*480:rate=25",
-           "-vcodec", "libx264", "-profile:v", "baseline", "-keyint_min", "60", "-g", "60",
-           "-sc_threshold", "0", "-f", "rtp", "rtp://127.0.0.1:56000", NULL);
-    return 0;
+static int WriteRtpCallback(void* opaque, uint8_t* buf, int buf_size) {
+  WebRTCSessionFactory* webrtc_session_factory = (WebRTCSessionFactory*)opaque;
+  rtp_header* rtp_hdr = (rtp_header*)buf;
+  rtp_hdr->ssrc = htonl(12345678);
+  std::vector<std::shared_ptr<WebRTCSession>> all_sessions;
+  std::shared_ptr<uint8_t> shared_buf(new uint8_t[buf_size]);
+  memcpy(shared_buf.get(), buf, buf_size);
+  webrtc_session_factory->GetAllReadyWebRTCSession(&all_sessions);
+  for (const auto& session : all_sessions) {
+    session->loop()->runInLoop([session, shared_buf, buf_size]() {
+      session->webrtc_transport()->EncryptAndSendRtpPacket(shared_buf.get(), buf_size);
+    });
   }
+  return buf_size;
+}
+
+int H2642Rtp(const char* in_filename, void* opaque) {
+  const AVOutputFormat* ofmt = NULL;
+  AVIOContext* avio_ctx = NULL;
+  AVFormatContext *ifmt_ctx = NULL, *ofmt_ctx = NULL;
+  AVPacket* pkt = NULL;
+  int ret, i;
+  int stream_index = 0;
+  int* stream_mapping = NULL;
+  int stream_mapping_size = 0;
+  int64_t pts = 0;
+  uint8_t *buffer = NULL, *avio_ctx_buffer = NULL;
+  size_t buffer_size, avio_ctx_buffer_size = 4096;
+
+  avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
+  if (!avio_ctx_buffer) {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+  avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 1, opaque, NULL,
+                                WriteRtpCallback, NULL);
+  if (!avio_ctx) {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+  avio_ctx->max_packet_size = 1400;
+
+  pkt = av_packet_alloc();
+  if (!pkt) {
+    fprintf(stderr, "Could not allocate AVPacket\n");
+    return 1;
+  }
+
+  if ((ret = avformat_open_input(&ifmt_ctx, in_filename, 0, 0)) < 0) {
+    fprintf(stderr, "Could not open input file '%s'", in_filename);
+    goto end;
+  }
+
+  if ((ret = avformat_find_stream_info(ifmt_ctx, 0)) < 0) {
+    fprintf(stderr, "Failed to retrieve input stream information");
+    goto end;
+  }
+
+  av_dump_format(ifmt_ctx, 0, in_filename, 0);
+
+  avformat_alloc_output_context2(&ofmt_ctx, NULL, "rtp", NULL);
+  if (!ofmt_ctx) {
+    fprintf(stderr, "Could not create output context\n");
+    ret = AVERROR_UNKNOWN;
+    goto end;
+  }
+
+  stream_mapping_size = ifmt_ctx->nb_streams;
+  stream_mapping = (int*)av_calloc(stream_mapping_size, sizeof(*stream_mapping));
+  if (!stream_mapping) {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+
+  ofmt = ofmt_ctx->oformat;
+
+  for (i = 0; i < ifmt_ctx->nb_streams; i++) {
+    AVStream* out_stream;
+    AVStream* in_stream = ifmt_ctx->streams[i];
+    AVCodecParameters* in_codecpar = in_stream->codecpar;
+
+    if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO &&
+        in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO &&
+        in_codecpar->codec_type != AVMEDIA_TYPE_SUBTITLE) {
+      stream_mapping[i] = -1;
+      continue;
+    }
+
+    stream_mapping[i] = stream_index++;
+
+    out_stream = avformat_new_stream(ofmt_ctx, NULL);
+    if (!out_stream) {
+      fprintf(stderr, "Failed allocating output stream\n");
+      ret = AVERROR_UNKNOWN;
+      goto end;
+    }
+
+    ret = avcodec_parameters_copy(out_stream->codecpar, in_codecpar);
+    if (ret < 0) {
+      fprintf(stderr, "Failed to copy codec parameters\n");
+      goto end;
+    }
+    out_stream->codecpar->codec_tag = 0;
+  }
+  av_dump_format(ofmt_ctx, 0, NULL, 1);
+
+  ofmt_ctx->pb = avio_ctx;
+
+  ret = avformat_write_header(ofmt_ctx, NULL);
+  if (ret < 0) {
+    fprintf(stderr, "Error occurred when opening output file\n");
+    goto end;
+  }
+
+  while (1) {
+    AVStream *in_stream, *out_stream;
+
+    ret = av_read_frame(ifmt_ctx, pkt);
+    if (ret < 0) {
+      for (size_t i = 0; i < ifmt_ctx->nb_streams; i++) {
+        av_seek_frame(ifmt_ctx, i, 0, AVSEEK_FLAG_BYTE);
+      }
+      continue;
+    }
+
+    in_stream = ifmt_ctx->streams[pkt->stream_index];
+    if (pkt->stream_index >= stream_mapping_size || stream_mapping[pkt->stream_index] < 0) {
+      av_packet_unref(pkt);
+      continue;
+    }
+
+    pkt->stream_index = stream_mapping[pkt->stream_index];
+    out_stream = ofmt_ctx->streams[pkt->stream_index];
+    // log_packet(ifmt_ctx, pkt, "in");
+    pts += 40;
+    pkt->pts = pts;
+    pkt->dts = pts;
+
+    /* copy packet */
+    av_packet_rescale_ts(pkt, in_stream->time_base, out_stream->time_base);
+    pkt->pos = -1;
+    // log_packet(ofmt_ctx, pkt, "out");
+    std::this_thread::sleep_for(std::chrono::milliseconds(40));
+    ret = av_interleaved_write_frame(ofmt_ctx, pkt);
+    /* pkt is now blank (av_interleaved_write_frame() takes ownership of
+     * its contents and resets pkt), so that no unreferencing is necessary.
+     * This would be different if one used av_write_frame(). */
+    if (ret < 0) {
+      fprintf(stderr, "Error muxing packet\n");
+      break;
+    }
+  }
+
+  av_write_trailer(ofmt_ctx);
+end:
+  av_packet_free(&pkt);
+
+  avformat_close_input(&ifmt_ctx);
+
+  /* close output */
+  if (ofmt_ctx && !(ofmt->flags & AVFMT_NOFILE)) avio_closep(&ofmt_ctx->pb);
+  avformat_free_context(ofmt_ctx);
+
+  av_freep(&stream_mapping);
+
+  if (ret < 0 && ret != AVERROR_EOF) {
+    fprintf(stderr, "Error occurred: %d\n", ret);
+    return 1;
+  }
+
+  return 0;
+}
+
+int main(int argc, char* argv[]) {
   // ffmpeg -re -f lavfi -i testsrc2=size=640*480:rate=25 -vcodec libx264 -profile:v baseline
   // -keyint_min 60 -g 60 -sc_threshold 0 -f rtp rtp://127.0.0.1:56000
 
@@ -161,27 +338,13 @@ int main(int argc, char* argv[]) {
   EventLoop loop;
   WebRTCSessionFactory webrtc_session_factory;
 
-  UdpServer rtp_recieve_server(&loop, muduo::net::InetAddress("127.0.0.1", 56000), "rtp_server");
-  UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", 10000), "rtc_server");
+  std::thread flv_2_rtp_thread([&webrtc_session_factory]() {
+    H2642Rtp("./test.h264", &webrtc_session_factory);
+  });
+
+  UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", port), "rtc_server");
   HttpServer http_server(&loop, muduo::net::InetAddress("0.0.0.0", 8000), "http_server",
                          TcpServer::kReusePort);
-
-  rtp_recieve_server.SetPacketCallback(
-      [&webrtc_session_factory](UdpServer* server, const uint8_t* buf, size_t len,
-                                const muduo::net::InetAddress& peer_addr,
-                                muduo::Timestamp timestamp) {
-        rtp_header* rtp_hdr = (rtp_header*)buf;
-        rtp_hdr->ssrc = htonl(12345678);
-        std::vector<std::shared_ptr<WebRTCSession>> all_sessions;
-        std::shared_ptr<uint8_t> shared_buf(new uint8_t[len]);
-        memcpy(shared_buf.get(), buf, len);
-        webrtc_session_factory.GetAllReadyWebRTCSession(&all_sessions);
-        for (const auto& session : all_sessions) {
-          session->loop()->runInLoop([session, shared_buf, len]() {
-            session->webrtc_transport()->EncryptAndSendRtpPacket(shared_buf.get(), len);
-          });
-        }
-      });
 
   rtc_server.SetPacketCallback([&webrtc_session_factory](UdpServer* server, const uint8_t* buf,
                                                          size_t len,
@@ -206,6 +369,7 @@ int main(int argc, char* argv[]) {
     auto connection = server->GetOrCreatConnection(peer_addr);
     if (!connection) {
       std::cout << "get connection error" << std::endl;
+      return;
     }
     auto transport = std::shared_ptr<NetworkTransport>(new NetworkTransport(connection));
     session->SetNetworkTransport(transport);
@@ -226,7 +390,6 @@ int main(int argc, char* argv[]) {
         }
       });
   loop.runInLoop([&]() {
-    rtp_recieve_server.Start();
     rtc_server.Start();
     http_server.start();
   });

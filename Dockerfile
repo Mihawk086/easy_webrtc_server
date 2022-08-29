@@ -11,8 +11,10 @@ RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list &
 RUN apt-get -y update && \
 	apt-get install -y \
 		libssl-dev \
-    libboost-all-dev \
-    ffmpeg \
+    	libboost-all-dev \
+		libavutil-dev \
+		libavformat-dev \
+		libavcodec-dev \
 		pkg-config \
 		cmake \
 		automake \
@@ -21,6 +23,7 @@ RUN apt-get -y update && \
 		git \
 		gdb \
 		net-tools \
+		ffmpeg \
 		vim 
 
 RUN cd /home && \
