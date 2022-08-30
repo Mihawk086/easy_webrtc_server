@@ -56,6 +56,7 @@ class SrtpSession {
   // Allocated by this.
   srtp_t session{nullptr};
   bool is_init = false;
+  uint8_t* encrypt_buffer_;
 };
 }  // namespace RTC
 

@@ -59,8 +59,7 @@ bool WebRtcTransport::SendPacket(const uint8_t* data, size_t len,
 }
 
 void WebRtcTransport::EncryptAndSendRtpPacket(const uint8_t* data, size_t len) {
-  memcpy(protect_buf_, data, len);
-  const uint8_t* p = (uint8_t*)protect_buf_;
+  const uint8_t* p = data;
   size_t tmp_len = len;
   bool ret = false;
   if (is_ready_.load()) {

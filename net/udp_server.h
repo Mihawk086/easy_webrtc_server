@@ -25,7 +25,7 @@ class UdpServer {
   typedef std::function<void(muduo::net::EventLoop*)> ThreadInitCallback;
 
   UdpServer(muduo::net::EventLoop* loop, const muduo::net::InetAddress& listen_addr,
-            const std::string& name);
+            const std::string& name, int num_threads);
   ~UdpServer();
   void SetPacketCallback(ServerPacketCallback cb) { callback_ = cb; }
   void SetThreadInitCallback(const ThreadInitCallback& cb) { thread_init_callback_ = cb; }

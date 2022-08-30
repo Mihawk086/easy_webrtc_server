@@ -14,7 +14,8 @@ using namespace muduo::net;
 
 static const int BUF_SIZE = 4 * 1024;
 
-UdpServer::UdpServer(EventLoop* loop, const InetAddress& listen_addr, const std::string& name)
+UdpServer::UdpServer(EventLoop* loop, const InetAddress& listen_addr, const std::string& name,
+                     int num_threads)
     : loop_(CHECK_NOTNULL(loop)), thread_pool_(new EventLoopThreadPool(loop, name)) {
   size_ = BUF_SIZE;
   buf_ = new char[size_];
@@ -25,9 +26,23 @@ UdpServer::UdpServer(EventLoop* loop, const InetAddress& listen_addr, const std:
   socket_->bindAddress(listen_addr);
   channel_ = std::unique_ptr<Channel>(new Channel(loop, socket_->fd()));
   channel_->setReadCallback(std::bind(&UdpServer::HandleRead, this, _1));
+  thread_pool_->setThreadNum(num_threads);
 }
 
 UdpServer::~UdpServer() {}
+
+static int DissolveUdpSock(int fd) {
+  struct sockaddr_storage addr;
+  socklen_t addr_len = sizeof(addr);
+  if (-1 == getsockname(fd, (struct sockaddr*)&addr, &addr_len)) {
+    return -1;
+  }
+  addr.ss_family = AF_UNSPEC;
+  if (-1 == ::connect(fd, (struct sockaddr*)&addr, addr_len)) {
+    return -1;
+  }
+  return 0;
+}
 
 void UdpServer::HandleRead(Timestamp receive_time) {
   loop_->assertInLoopThread();
@@ -51,6 +66,7 @@ UdpConnectionPtr UdpServer::GetOrCreatConnection(const InetAddress& remote_addr)
   auto connection =
       std::shared_ptr<UdpConnection>(new UdpConnection(io_loop, key, fd, local_addr, remote_addr));
   connections_[key] = connection;
+  DissolveUdpSock(socket_->fd());
   return connection;
 }
 

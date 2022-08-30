@@ -60,7 +60,6 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   std::shared_ptr<RTC::SrtpSession> srtp_session_;
   std::shared_ptr<TransportInterface> transport_;
 
-  char protect_buf_[65536];
   std::atomic<bool> is_ready_;
   std::string ip_;
   uint16_t port_;

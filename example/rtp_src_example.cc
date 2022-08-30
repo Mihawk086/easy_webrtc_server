@@ -127,7 +127,7 @@ class WebRTCSessionFactory {
         return ptr;
       }
       ptr = it->second;
-        }
+    }
     return ptr;
   }
   void GetAllReadyWebRTCSession(std::vector<std::shared_ptr<WebRTCSession>>* sessions) {
@@ -338,11 +338,10 @@ int main(int argc, char* argv[]) {
   EventLoop loop;
   WebRTCSessionFactory webrtc_session_factory;
 
-  std::thread flv_2_rtp_thread([&webrtc_session_factory]() {
-    H2642Rtp("./test.h264", &webrtc_session_factory);
-  });
+  std::thread flv_2_rtp_thread(
+      [&webrtc_session_factory]() { H2642Rtp("./test.h264", &webrtc_session_factory); });
 
-  UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", port), "rtc_server");
+  UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", port), "rtc_server", 2);
   HttpServer http_server(&loop, muduo::net::InetAddress("0.0.0.0", 8000), "http_server",
                          TcpServer::kReusePort);
 
@@ -374,7 +373,11 @@ int main(int argc, char* argv[]) {
     auto transport = std::shared_ptr<NetworkTransport>(new NetworkTransport(connection));
     session->SetNetworkTransport(transport);
     struct sockaddr_in remote_sockaddr_in = *(struct sockaddr_in*)peer_addr.getSockAddr();
-    session->webrtc_transport()->OnInputDataPacket(buf, len, remote_sockaddr_in);
+    std::shared_ptr<uint8_t> shared_buf(new uint8_t[len]);
+    memcpy(shared_buf.get(), buf, len);
+    session->loop()->runInLoop([session, shared_buf, len, remote_sockaddr_in]() {
+      session->webrtc_transport()->OnInputDataPacket(shared_buf.get(), len, remote_sockaddr_in);
+    });
   });
 
   http_server.setHttpCallback(
