@@ -1,5 +1,6 @@
 extern "C" {
 #include <libavformat/avformat.h>
+#include <libavutil/opt.h>
 #include <libavutil/timestamp.h>
 }
 #include <signal.h>
@@ -29,19 +30,6 @@ extern "C" {
 
 using namespace muduo;
 using namespace muduo::net;
-
-typedef struct rtp_header {
-  uint16_t csrccount : 4;
-  uint16_t extension : 1;
-  uint16_t padding : 1;
-  uint16_t version : 2;
-  uint16_t type : 7;
-  uint16_t markerbit : 1;
-  uint16_t seq_number;
-  uint32_t timestamp;
-  uint32_t ssrc;
-  uint32_t csrc[16];
-} rtp_header;
 
 static std::vector<std::string> Split(const string& s, const char* delim) {
   std::vector<std::string> ret;
@@ -149,8 +137,6 @@ class WebRTCSessionFactory {
 
 static int WriteRtpCallback(void* opaque, uint8_t* buf, int buf_size) {
   WebRTCSessionFactory* webrtc_session_factory = (WebRTCSessionFactory*)opaque;
-  rtp_header* rtp_hdr = (rtp_header*)buf;
-  rtp_hdr->ssrc = htonl(12345678);
   std::vector<std::shared_ptr<WebRTCSession>> all_sessions;
   std::shared_ptr<uint8_t> shared_buf(new uint8_t[buf_size]);
   memcpy(shared_buf.get(), buf, buf_size);
@@ -222,6 +208,7 @@ int H2642Rtp(const char* in_filename, void* opaque) {
   }
 
   ofmt = ofmt_ctx->oformat;
+  av_opt_set_int(ofmt_ctx->priv_data, "ssrc", 12345678, 0);
 
   for (i = 0; i < ifmt_ctx->nb_streams; i++) {
     AVStream* out_stream;
