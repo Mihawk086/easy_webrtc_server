@@ -1,4 +1,5 @@
 extern "C" {
+#include <libavcodec/bsf.h>
 #include <libavformat/avformat.h>
 #include <libavutil/opt.h>
 #include <libavutil/timestamp.h>
@@ -155,12 +156,16 @@ int H2642Rtp(const char* in_filename, void* opaque) {
   AVFormatContext *ifmt_ctx = NULL, *ofmt_ctx = NULL;
   AVPacket* pkt = NULL;
   int ret, i;
-  int stream_index = 0;
-  int* stream_mapping = NULL;
+  int in_stream_index = 0, out_stream_index = 0;
   int stream_mapping_size = 0;
   int64_t pts = 0;
   uint8_t *buffer = NULL, *avio_ctx_buffer = NULL;
   size_t buffer_size, avio_ctx_buffer_size = 4096;
+
+  const AVBitStreamFilter* abs_filter = NULL;
+  AVBSFContext* abs_ctx = NULL;
+  abs_filter = av_bsf_get_by_name("h264_mp4toannexb");
+  av_bsf_alloc(abs_filter, &abs_ctx);
 
   avio_ctx_buffer = (uint8_t*)av_malloc(avio_ctx_buffer_size);
   if (!avio_ctx_buffer) {
@@ -200,13 +205,6 @@ int H2642Rtp(const char* in_filename, void* opaque) {
     goto end;
   }
 
-  stream_mapping_size = ifmt_ctx->nb_streams;
-  stream_mapping = (int*)av_calloc(stream_mapping_size, sizeof(*stream_mapping));
-  if (!stream_mapping) {
-    ret = AVERROR(ENOMEM);
-    goto end;
-  }
-
   ofmt = ofmt_ctx->oformat;
   av_opt_set_int(ofmt_ctx->priv_data, "ssrc", 12345678, 0);
 
@@ -215,29 +213,30 @@ int H2642Rtp(const char* in_filename, void* opaque) {
     AVStream* in_stream = ifmt_ctx->streams[i];
     AVCodecParameters* in_codecpar = in_stream->codecpar;
 
-    if (in_codecpar->codec_type != AVMEDIA_TYPE_AUDIO &&
-        in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO &&
-        in_codecpar->codec_type != AVMEDIA_TYPE_SUBTITLE) {
-      stream_mapping[i] = -1;
+    if (in_codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
       continue;
     }
-
-    stream_mapping[i] = stream_index++;
-
     out_stream = avformat_new_stream(ofmt_ctx, NULL);
     if (!out_stream) {
       fprintf(stderr, "Failed allocating output stream\n");
       ret = AVERROR_UNKNOWN;
       goto end;
     }
-
     ret = avcodec_parameters_copy(out_stream->codecpar, in_codecpar);
     if (ret < 0) {
       fprintf(stderr, "Failed to copy codec parameters\n");
       goto end;
     }
+
+    avcodec_parameters_copy(abs_ctx->par_in, in_codecpar);
+    av_bsf_init(abs_ctx);
+
     out_stream->codecpar->codec_tag = 0;
+    in_stream_index = i;
+    out_stream_index = out_stream->index;
+    break;
   }
+
   av_dump_format(ofmt_ctx, 0, NULL, 1);
 
   ofmt_ctx->pb = avio_ctx;
@@ -258,19 +257,19 @@ int H2642Rtp(const char* in_filename, void* opaque) {
       }
       continue;
     }
-
-    in_stream = ifmt_ctx->streams[pkt->stream_index];
-    if (pkt->stream_index >= stream_mapping_size || stream_mapping[pkt->stream_index] < 0) {
-      av_packet_unref(pkt);
+    if (pkt->stream_index != in_stream_index) {
       continue;
     }
 
-    pkt->stream_index = stream_mapping[pkt->stream_index];
-    out_stream = ofmt_ctx->streams[pkt->stream_index];
+    in_stream = ifmt_ctx->streams[in_stream_index];
+    out_stream = ofmt_ctx->streams[0];
     // log_packet(ifmt_ctx, pkt, "in");
     pts += 40;
     pkt->pts = pts;
     pkt->dts = pts;
+
+    av_bsf_send_packet(abs_ctx, pkt);
+    av_bsf_receive_packet(abs_ctx, pkt);
 
     /* copy packet */
     av_packet_rescale_ts(pkt, in_stream->time_base, out_stream->time_base);
@@ -297,7 +296,7 @@ end:
   if (ofmt_ctx && !(ofmt->flags & AVFMT_NOFILE)) avio_closep(&ofmt_ctx->pb);
   avformat_free_context(ofmt_ctx);
 
-  av_freep(&stream_mapping);
+  av_bsf_free(&abs_ctx);
 
   if (ret < 0 && ret != AVERROR_EOF) {
     fprintf(stderr, "Error occurred: %d\n", ret);
@@ -310,6 +309,8 @@ end:
 int main(int argc, char* argv[]) {
   // ffmpeg -re -f lavfi -i testsrc2=size=640*480:rate=25 -vcodec libx264 -profile:v baseline
   // -keyint_min 60 -g 60 -sc_threshold 0 -f rtp rtp://127.0.0.1:56000
+  // ffmpeg -re -stream_loop -1 -i  test.mp4 -vcodec copy -bsf:v h264_mp4toannexb -ssrc 12345678 -f
+  // rtp rtp://127.0.0.1:56000
 
   std::string ip("127.0.0.1");
   uint16_t port = 10000;
@@ -331,6 +332,23 @@ int main(int argc, char* argv[]) {
   UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", port), "rtc_server", 2);
   HttpServer http_server(&loop, muduo::net::InetAddress("0.0.0.0", 8000), "http_server",
                          TcpServer::kReusePort);
+  UdpServer rtp_server(&loop, muduo::net::InetAddress("127.0.0.1", 56000), "rtc_server", 0);
+
+  rtp_server.SetPacketCallback([&webrtc_session_factory](UdpServer* server, const uint8_t* buf,
+                                                         size_t buf_size,
+                                                         const muduo::net::InetAddress& peer_addr,
+                                                         muduo::Timestamp timestamp) {
+    std::vector<std::shared_ptr<WebRTCSession>> all_sessions;
+    std::shared_ptr<uint8_t> shared_buf(new uint8_t[buf_size]);
+    memcpy(shared_buf.get(), buf, buf_size);
+    webrtc_session_factory.GetAllReadyWebRTCSession(&all_sessions);
+    for (const auto& session : all_sessions) {
+      session->loop()->runInLoop([session, shared_buf, buf_size]() {
+        session->webrtc_transport()->EncryptAndSendRtpPacket(shared_buf.get(), buf_size);
+      });
+    }
+    return;
+  });
 
   rtc_server.SetPacketCallback([&webrtc_session_factory](UdpServer* server, const uint8_t* buf,
                                                          size_t len,
@@ -380,6 +398,7 @@ int main(int argc, char* argv[]) {
         }
       });
   loop.runInLoop([&]() {
+    rtp_server.Start();
     rtc_server.Start();
     http_server.start();
   });
