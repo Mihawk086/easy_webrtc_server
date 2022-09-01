@@ -230,8 +230,8 @@ int H2642Rtp(const char* in_filename, void* opaque) {
 
     avcodec_parameters_copy(abs_ctx->par_in, in_codecpar);
     av_bsf_init(abs_ctx);
+    avcodec_parameters_copy(out_stream->codecpar, abs_ctx->par_out);
 
-    out_stream->codecpar->codec_tag = 0;
     in_stream_index = i;
     out_stream_index = out_stream->index;
     break;
@@ -270,7 +270,6 @@ int H2642Rtp(const char* in_filename, void* opaque) {
 
     av_bsf_send_packet(abs_ctx, pkt);
     av_bsf_receive_packet(abs_ctx, pkt);
-
     /* copy packet */
     av_packet_rescale_ts(pkt, in_stream->time_base, out_stream->time_base);
     pkt->pos = -1;
