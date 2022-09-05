@@ -1,4 +1,11 @@
 <html>
+<style>
+  video {
+    border: 5px solid black;
+    width: 640px;
+    height: 480px;
+  }
+</style>
 
 <body>
   Local: <br>
@@ -49,24 +56,20 @@
       local.setRemoteDescription(desc);
     };
 
-    // 获取本地音频和视频流
-    navigator.mediaDevices.getDisplayMedia({
-      "audio": false,
-      "video": true
-    }, function (stream) {
-      //绑定本地媒体流到video标签用于输出
-      document.getElementById('localVideo').srcObject = stream;
-      //向PeerConnection中加入需要发送的流
-      local.addStream(stream);
-      //如果是发起方则发送一个offer信令
-      local.createOffer(sendOfferFn, function (error) {
-        console.log('Failure callback: ' + error);
-      });
 
-    }, function (error) {
-      //处理媒体流创建失败错误
-      console.log('getUserMedia error: ' + error);
-    });
+    navigator.mediaDevices.getDisplayMedia({ video: true })
+      .then(stream => {
+        //we have a stream, attach it to a feedback video element
+        document.getElementById('localVideo').srcObject = stream;
+        //向PeerConnection中加入需要发送的流
+        local.addStream(stream);
+        //如果是发起方则发送一个offer信令
+        local.createOffer(sendOfferFn, function (error) {
+          console.log('Failure callback: ' + error);
+        });
+      }, error => {
+        console.log("Unable to acquire screen capture", error);
+      });
 
   </script>
 </body>

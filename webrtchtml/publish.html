@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Publish Demo</title>
+    <!-- Load the polyfill to switch-hit between Chrome and Firefox -->
+    <style>
+        video {
+            border: 5px solid black;
+            width: 640px;
+            height: 480px;
+        }
+    </style>
+</head>
+
+<body>
+    <video id="vid" autoplay></video>
+    <br>
+    <p>ip_address</p>
+    <input id="input" type="text" name="ip_address" value="127.0.0.1">
+    <br>
+    <button id="btn1">Call</button>
+    <button id="btn2">Hang Up</button>
+</body>
+<script>
+    var vid = document.getElementById('vid');
+    var btn1 = document.getElementById('btn1');
+    var btn2 = document.getElementById('btn2');
+    var input = document.getElementById('input');
+
+    btn1.addEventListener('click', start);
+    btn2.addEventListener('click', stop);
+
+    btn1.disabled = false;
+    btn2.disabled = true;
+
+
+    var pc = null;
+    var xmlhttp = null;
+
+    function start() {
+        btn1.disabled = true;
+        btn2.disabled = false;
+        console.log('Starting Call');
+
+        var servers = null;
+        var IP = input.value;
+        pc = new RTCPeerConnection(servers);
+        console.log('Created remote peer connection object pc');
+        pc.onicecandidate = iceCallback;
+
+        xmlhttp = new XMLHttpRequest();
+        var addr = "http://" + IP + ":8000" + "/webrtc";
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+                var res = xmlhttp.responseText;
+                gotoffer(res);
+            }
+        }
+        xmlhttp.open("GET", addr, true);
+        xmlhttp.send();
+
+    }
+
+    function creatAnswer() {
+        navigator.mediaDevices.getDisplayMedia({ video: true })
+            .then(stream => {
+                //we have a stream, attach it to a feedback video element
+                vid.srcObject = stream;
+                pc.addStream(stream)
+                pc.createAnswer().then(
+                    gotDescription,
+                    onCreateSessionDescriptionError
+                );
+            }, error => {
+                console.log("Unable to acquire screen capture", error);
+            });
+    }
+
+    function onCreateSessionDescriptionError(error) {
+        console.log('Failed to create session description: ' + error.toString());
+        stop();
+    }
+
+    function onCreateAnswerError(error) {
+        console.log('Failed to set createAnswer: ' + error.toString());
+        stop();
+    }
+
+    function onSetLocalDescriptionError(error) {
+        console.log('Failed to set setLocalDescription: ' + error.toString());
+        stop();
+    }
+
+    function onSetLocalDescriptionSuccess() {
+        console.log('localDescription success.');
+    }
+
+    function gotoffer(offer) {
+
+        console.log('Offer from server \n' + offer);
+        var desc = new RTCSessionDescription();
+        desc.sdp = offer;
+        desc.type = 'offer';
+        pc.setRemoteDescription(desc);
+        // Since the 'remote' side has no media stream we need
+        // to pass in the right constraints in order for it to
+        // accept the incoming offer of audio and video.
+        creatAnswer();
+    }
+
+    function gotDescription(desc) {
+        // Provisional answer, set a=inactive & set sdp type to pranswer.
+        /*desc.sdp = desc.sdp.replace(/a=recvonly/g, 'a=inactive');
+        desc.type = 'pranswer';*/
+        pc.setLocalDescription(desc).then(
+            onSetLocalDescriptionSuccess,
+            onSetLocalDescriptionError
+        );
+        console.log('Pranswer from pc \n' + desc.sdp);
+        //conn.send(JSON.stringify(desc));
+        // send desc.sdp to server
+    }
+
+    function stop() {
+        console.log('Ending Call' + '\n\n');
+        pc.close();
+        pc = null;
+        btn1.disabled = false;
+        btn2.disabled = true;
+    }
+
+    function iceCallback(event) {
+        if (event.candidate) {
+            console.log('Remote ICE candidate: \n ' + event.candidate.candidate);
+            //conn.send(JSON.stringify(event.candidate));
+        }
+        else {
+            // All ICE candidates have been sent
+        }
+    } 
+</script>
+
+</html>

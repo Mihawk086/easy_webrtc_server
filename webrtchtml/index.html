@@ -1,21 +1,14 @@
 <!DOCTYPE html>
-<!--
- *  Copyright (c) 2015 The WebRTC project authors. All Rights Reserved.
- *
- *  Use of this source code is governed by a BSD-style license
- *  that can be found in the LICENSE file in the root of the source
- *  tree.
--->
 <html>
 
 <head>
-  <title>PeerConnection PRANSWER Demo</title>
+  <title>demo</title>
   <!-- Load the polyfill to switch-hit between Chrome and Firefox -->
   <style>
     video {
       border: 5px solid black;
-      width: 800px;
-      height: 600px;
+      width: 640px;
+      height: 480px;
     }
   </style>
 </head>
@@ -57,14 +50,8 @@
     pc.onicecandidate = iceCallback;
     pc.onaddstream = gotRemoteStream;
 
-    if (window.XMLHttpRequest) {
-      xmlhttp = new XMLHttpRequest();
-    }
-    else {
-      xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
-    }
+    xmlhttp = new XMLHttpRequest();
     var addr = "http://" + IP + ":8000" + "/webrtc";
-
     xmlhttp.onreadystatechange = function () {
       if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
         var res = xmlhttp.responseText;

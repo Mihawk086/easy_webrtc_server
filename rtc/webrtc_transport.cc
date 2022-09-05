@@ -2,6 +2,27 @@
 
 #include <iostream>
 
+struct RTPHeader {
+  uint8_t csrc_count : 4;
+  uint8_t extension : 1;
+  uint8_t padding : 1;
+  uint8_t version : 2;
+  uint8_t payload_type : 7;
+  uint8_t marker : 1;
+  uint16_t sequence_number;
+  uint32_t timestamp;
+  uint32_t ssrc;
+};
+
+static bool IsRtp(const uint8_t* data, size_t len) {
+  auto header = const_cast<RTPHeader*>(reinterpret_cast<const RTPHeader*>(data));
+  return ((len >= 12) &&
+          // DOC: https://tools.ietf.org/html/draft-ietf-avtcore-rfc5764-mux-fixes
+          (data[0] > 127 && data[0] < 192) &&
+          // RTP Version must be 2.
+          (header->version == 2));
+}
+
 WebRtcTransport::WebRtcTransport(std::string ip, uint16_t port)
     : is_ready_(false), ip_(ip), port_(port) {
   dtls_transport_.reset(new RTC::DtlsTransport(this));
@@ -35,6 +56,35 @@ std::string WebRtcTransport::GetLocalSdp() {
   return std::string(szsdp);
 }
 
+std::string WebRtcTransport::GetPublishSdp() {
+  char szsdp[1024 * 10] = {0};
+  int nssrc = 12345678;
+  sprintf(szsdp,
+          "v=0\r\n"
+          "o=- 1495799811084970 1495799811084970 IN IP4 %s\r\n"
+          "s=Streaming Test\r\n"
+          "t=0 0\r\n"
+          "a=group:BUNDLE 0\r\n"
+          "a=msid-semantic: WMS janus\r\n"
+          "m=video 1 RTP/SAVPF 96\r\n"
+          "c=IN IP4 %s\r\n"
+          "a=mid:0\r\n"
+          "a=recvonly\r\n"
+          "a=rtcp-mux\r\n"
+          "a=ice-ufrag:%s\r\n"
+          "a=ice-pwd:%s\r\n"
+          "a=ice-options:trickle\r\n"
+          "a=fingerprint:sha-256 %s\r\n"
+          "a=setup:actpass\r\n"
+          "a=connection:new\r\n"
+          "a=rtpmap:96 H264/90000\r\n"
+          "a=candidate:%s 1 udp %u %s %d typ %s\r\n",
+          ip_.c_str(), ip_.c_str(), ice_server_->GetUsernameFragment().c_str(),
+          ice_server_->GetPassword().c_str(), GetSHA256Fingerprint().c_str(), "4", 12345678,
+          ip_.c_str(), port_, "host");
+  return std::string(szsdp);
+}
+
 void WebRtcTransport::OnInputDataPacket(const uint8_t* buf, size_t len,
                                         const struct sockaddr_in& remote_address) {
   if (RTC::StunPacket::IsStun(buf, len)) {
@@ -44,9 +94,19 @@ void WebRtcTransport::OnInputDataPacket(const uint8_t* buf, size_t len,
       return;
     }
     ice_server_->ProcessStunPacket(packet, const_cast<sockaddr_in*>(&remote_address));
+    return;
   }
   if (RTC::DtlsTransport::IsDtls(buf, len)) {
     dtls_transport_->ProcessDtlsData(buf, len);
+    return;
+  }
+  if (IsRtp(buf, len)) {
+    if (rtp_channel_) {
+      size_t new_len = len;
+      srtp_session_->DecryptSrtp((uint8_t*)buf, &new_len);
+      rtp_channel_->OnRTP(buf, new_len);
+    }
+    return;
   }
 }
 

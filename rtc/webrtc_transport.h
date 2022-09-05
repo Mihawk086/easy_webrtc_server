@@ -20,8 +20,12 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
 
   void Start();
   std::string GetLocalSdp();
+  std::string GetPublishSdp();
   std::string GetidentifyID() { return ice_server_->GetUsernameFragment(); }
-  void SetNetworkTransport(std::shared_ptr<TransportInterface> transport) { transport_ = transport; }
+  void SetNetworkTransport(std::shared_ptr<TransportInterface> transport) {
+    transport_ = transport;
+  }
+  void SetRTPChannel(std::shared_ptr<RTPChannelInterface> channel) { rtp_channel_ = channel; }
   void OnIceServerCompleted();
   void OnDtlsCompleted(std::string client_key, std::string server_key,
                        RTC::SrtpSession::CryptoSuite srtp_crypto_suite);
@@ -59,6 +63,7 @@ class WebRtcTransport : public std::enable_shared_from_this<WebRtcTransport>,
   std::shared_ptr<RTC::DtlsTransport> dtls_transport_;
   std::shared_ptr<RTC::SrtpSession> srtp_session_;
   std::shared_ptr<TransportInterface> transport_;
+  std::shared_ptr<RTPChannelInterface> rtp_channel_;
 
   std::atomic<bool> is_ready_;
   std::string ip_;

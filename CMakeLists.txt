@@ -9,7 +9,7 @@ add_compile_options(-g)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-file(GLOB RTC_LIST ./rtc/*.cc ./common/*.cc ./net/*.cc)
+file(GLOB RTC_LIST ./rtc/*.cc ./common/*.cc ./net/*.cc ./session/*.cc)
 
 add_library(rtc ${RTC_LIST})
 
@@ -22,5 +22,7 @@ dl pthread )
 set(RTC_LIBRARYS rtc  muduo_http muduo_net muduo_base)
      
 add_executable(rtp_src_example ./example/rtp_src_example.cc)
-
 target_link_libraries(rtp_src_example ${RTC_LIBRARYS} ${LINK_LIBRARYS} avformat avcodec avutil)
+
+add_executable(publish ./example/publish.cc)
+target_link_libraries(publish ${RTC_LIBRARYS} ${LINK_LIBRARYS} avformat avcodec avutil)

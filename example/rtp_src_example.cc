@@ -4,8 +4,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/timestamp.h>
 }
-#include <signal.h>
-#include <sys/prctl.h>
 
 #include <atomic>
 #include <chrono>
@@ -28,113 +26,10 @@ extern "C" {
 #include "rtc/stun_packet.h"
 #include "rtc/transport_interface.h"
 #include "rtc/webrtc_transport.h"
+#include "session/webrtc_session.h"
 
 using namespace muduo;
 using namespace muduo::net;
-
-static std::vector<std::string> Split(const string& s, const char* delim) {
-  std::vector<std::string> ret;
-  size_t last = 0;
-  auto index = s.find(delim, last);
-  while (index != string::npos) {
-    if (index - last >= 0) {
-      ret.push_back(s.substr(last, index - last));
-    }
-    last = index + strlen(delim);
-    index = s.find(delim, last);
-  }
-  if (!s.size() || s.size() - last >= 0) {
-    ret.push_back(s.substr(last));
-  }
-  return ret;
-}
-
-class NetworkTransport : public TransportInterface {
- public:
-  NetworkTransport(const std::shared_ptr<UdpConnection>& con) : connection_(con) {}
-  ~NetworkTransport() {}
-  bool SendPacket(const uint8_t* data, size_t len, const struct sockaddr_in& remote_address) {
-    connection_->Send(data, len);
-  }
-  std::shared_ptr<UdpConnection> connection() { return connection_; }
-
- private:
-  std::shared_ptr<UdpConnection> connection_;
-};
-
-class WebRTCSession {
- public:
-  WebRTCSession(const std::shared_ptr<WebRtcTransport>& webrtc_transport)
-      : webrtc_transport_(webrtc_transport), is_ready_(false) {}
-  ~WebRTCSession() {}
-  void SetNetworkTransport(const std::shared_ptr<NetworkTransport>& transport) {
-    network_transport_ = transport;
-    webrtc_transport_->SetNetworkTransport(transport);
-    auto connection = transport->connection();
-    connection->SetPacketCallback(
-        [this](const std::shared_ptr<UdpConnection>& con, const uint8_t* buf, size_t len,
-               const muduo::net::InetAddress& peer_addr, muduo::Timestamp) {
-          struct sockaddr_in remote_sockaddr_in = *(struct sockaddr_in*)peer_addr.getSockAddr();
-          webrtc_transport_->OnInputDataPacket(buf, len, remote_sockaddr_in);
-        });
-    connection->Start();
-    SetLoop(connection->loop());
-    is_ready_.store(true);
-  }
-  void SetLoop(muduo::net::EventLoop* loop) { loop_ = loop; }
-  muduo::net::EventLoop* loop() { return loop_; }
-  std::atomic<bool>& is_ready() { return is_ready_; }
-  std::shared_ptr<WebRtcTransport> webrtc_transport() { return webrtc_transport_; }
-
- private:
-  std::shared_ptr<WebRtcTransport> webrtc_transport_;
-  std::shared_ptr<NetworkTransport> network_transport_;
-  muduo::net::EventLoop* loop_;
-  std::atomic<bool> is_ready_;
-};
-
-class WebRTCSessionFactory {
- public:
-  WebRTCSessionFactory() {}
-  ~WebRTCSessionFactory() {}
-  std::shared_ptr<WebRTCSession> CreateWebRTCSession(const std::string& ip, uint16_t port) {
-    std::shared_ptr<WebRtcTransport> rtc_transport(new WebRtcTransport(ip, port));
-    std::shared_ptr<WebRTCSession> rtc_session(new WebRTCSession(rtc_transport));
-    {
-      std::lock_guard<std::mutex> guard(mutex_);
-      rtc_sessions.insert(std::make_pair(rtc_transport->GetidentifyID(), rtc_session));
-    }
-    return rtc_session;
-  }
-  std::shared_ptr<WebRTCSession> GetWebRTCSession(const std::string& key) {
-    std::shared_ptr<WebRTCSession> ptr = nullptr;
-    {
-      std::lock_guard<std::mutex> guard(mutex_);
-      auto it = rtc_sessions.find(key);
-      if (it == rtc_sessions.end()) {
-        ptr = nullptr;
-        return ptr;
-      }
-      ptr = it->second;
-    }
-    return ptr;
-  }
-  void GetAllReadyWebRTCSession(std::vector<std::shared_ptr<WebRTCSession>>* sessions) {
-    {
-      std::lock_guard<std::mutex> guard(mutex_);
-      for (const auto& session : rtc_sessions) {
-        if (session.second->is_ready().load()) {
-          sessions->push_back(session.second);
-        }
-      }
-    }
-    return;
-  }
-
- private:
-  std::mutex mutex_;
-  std::map<std::string, std::shared_ptr<WebRTCSession>> rtc_sessions;
-};
 
 static int WriteRtpCallback(void* opaque, uint8_t* buf, int buf_size) {
   WebRTCSessionFactory* webrtc_session_factory = (WebRTCSessionFactory*)opaque;
@@ -150,7 +45,7 @@ static int WriteRtpCallback(void* opaque, uint8_t* buf, int buf_size) {
   return buf_size;
 }
 
-int H2642Rtp(const char* in_filename, void* opaque) {
+static int H2642Rtp(const char* in_filename, void* opaque) {
   const AVOutputFormat* ofmt = NULL;
   AVIOContext* avio_ctx = NULL;
   AVFormatContext *ifmt_ctx = NULL, *ofmt_ctx = NULL;
@@ -326,62 +221,18 @@ int main(int argc, char* argv[]) {
   WebRTCSessionFactory webrtc_session_factory;
 
   std::thread flv_2_rtp_thread(
-      [&webrtc_session_factory]() { H2642Rtp("./test.h264", &webrtc_session_factory); });
+      [&webrtc_session_factory]() { H2642Rtp("./test.flv", &webrtc_session_factory); });
 
   UdpServer rtc_server(&loop, muduo::net::InetAddress("0.0.0.0", port), "rtc_server", 2);
   HttpServer http_server(&loop, muduo::net::InetAddress("0.0.0.0", 8000), "http_server",
                          TcpServer::kReusePort);
-  UdpServer rtp_server(&loop, muduo::net::InetAddress("127.0.0.1", 56000), "rtc_server", 0);
-
-  rtp_server.SetPacketCallback([&webrtc_session_factory](UdpServer* server, const uint8_t* buf,
-                                                         size_t buf_size,
-                                                         const muduo::net::InetAddress& peer_addr,
-                                                         muduo::Timestamp timestamp) {
-    std::vector<std::shared_ptr<WebRTCSession>> all_sessions;
-    std::shared_ptr<uint8_t> shared_buf(new uint8_t[buf_size]);
-    memcpy(shared_buf.get(), buf, buf_size);
-    webrtc_session_factory.GetAllReadyWebRTCSession(&all_sessions);
-    for (const auto& session : all_sessions) {
-      session->loop()->runInLoop([session, shared_buf, buf_size]() {
-        session->webrtc_transport()->EncryptAndSendRtpPacket(shared_buf.get(), buf_size);
-      });
-    }
-    return;
-  });
 
   rtc_server.SetPacketCallback([&webrtc_session_factory](UdpServer* server, const uint8_t* buf,
                                                          size_t len,
                                                          const muduo::net::InetAddress& peer_addr,
                                                          muduo::Timestamp timestamp) {
-    if (!RTC::StunPacket::IsStun(buf, len)) {
-      std::cout << "receive not stun packet" << std::endl;
-      return;
-    }
-    RTC::StunPacket* packet = RTC::StunPacket::Parse(buf, len);
-    if (packet == nullptr) {
-      std::cout << "parse stun error" << std::endl;
-      return;
-    }
-    auto vec = Split(packet->GetUsername(), ":");
-    std::string use_name = vec[0];
-    auto session = webrtc_session_factory.GetWebRTCSession(use_name);
-    if (!session) {
-      std::cout << "no rtc session" << std::endl;
-      return;
-    }
-    auto connection = server->GetOrCreatConnection(peer_addr);
-    if (!connection) {
-      std::cout << "get connection error" << std::endl;
-      return;
-    }
-    auto transport = std::shared_ptr<NetworkTransport>(new NetworkTransport(connection));
-    session->SetNetworkTransport(transport);
-    struct sockaddr_in remote_sockaddr_in = *(struct sockaddr_in*)peer_addr.getSockAddr();
-    std::shared_ptr<uint8_t> shared_buf(new uint8_t[len]);
-    memcpy(shared_buf.get(), buf, len);
-    session->loop()->runInLoop([session, shared_buf, len, remote_sockaddr_in]() {
-      session->webrtc_transport()->OnInputDataPacket(shared_buf.get(), len, remote_sockaddr_in);
-    });
+    WebRTCSessionFactory::HandlePacket(&webrtc_session_factory, server, buf, len, peer_addr,
+                                       timestamp);
   });
 
   http_server.setHttpCallback(
