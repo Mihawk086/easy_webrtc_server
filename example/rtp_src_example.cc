@@ -248,7 +248,6 @@ int main(int argc, char* argv[]) {
         }
       });
   loop.runInLoop([&]() {
-    rtp_server.Start();
     rtc_server.Start();
     http_server.start();
   });
