@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.0)
 
 project(webrtc_server)
 
+set(CMAKE_CXX_STANDARD 17)
 SET(CMAKE_BUILD_TYPE "Debug")
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
 SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
@@ -9,7 +10,7 @@ add_compile_options(-g)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-file(GLOB RTC_LIST ./rtc/*.cc ./common/*.cc ./net/*.cc ./session/*.cc)
+file(GLOB RTC_LIST ./rtc/*.cc ./common/*.cc ./net/*.cc ./session/*.cc ./rtp/*.cc)
 
 add_library(rtc ${RTC_LIST})
 
