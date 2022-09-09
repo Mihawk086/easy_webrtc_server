@@ -13,6 +13,7 @@ class RtpPacket {
   ~RtpPacket() = default;
   bool Parse(const uint8_t* buffer, size_t size);
   void Clear();
+  std::string ToString() const;
 
   bool marker() const { return marker_; }
   uint8_t payload_type() const { return payload_type_; }
@@ -24,6 +25,9 @@ class RtpPacket {
   bool has_padding() const { return buffer_[0] & 0x20; }
   size_t padding_size() const { return padding_size_; }
   const uint8_t* payload() const { return &buffer_[0] + payload_offset_; }
+  size_t size() const {
+    return payload_offset_ + payload_size_ + padding_size_;
+  }
 
  private:
   bool ParseBuffer(const uint8_t* buffer, size_t size);

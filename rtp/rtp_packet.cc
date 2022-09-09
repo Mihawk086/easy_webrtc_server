@@ -2,6 +2,7 @@
 #include "rtp/rtp_packet.h"
 
 #include <cstring>
+#include <sstream>
 
 #include "rtp/byte_io.h"
 namespace webrtc {
@@ -58,6 +59,17 @@ void RtpPacket::Clear() {
   payload_offset_ = kFixedHeaderSize;
   payload_size_ = 0;
   padding_size_ = 0;
+}
+
+std::string RtpPacket::ToString() const {
+  std::stringstream result;
+  result << "{payload_type=" << std::to_string(payload_type_)
+         << "marker=" << marker_ << ", sequence_number=" << sequence_number_
+         << ", padding_size=" << padding_size_ << ", timestamp=" << timestamp_
+         << ", ssrc=" << ssrc_ << ", payload_offset=" << payload_offset_
+         << ", payload_size=" << payload_size_ << ", total_size=" << size()
+         << "}";
+  return result.str();
 }
 
 bool RtpPacket::ParseBuffer(const uint8_t* buffer, size_t size) {

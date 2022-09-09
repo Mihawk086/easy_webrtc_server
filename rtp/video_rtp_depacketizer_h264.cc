@@ -104,7 +104,28 @@ std::optional<VideoRtpDepacketizer::ParsedRtpPayload> ProcessStapAOrSingleNalu(
     }
     uint8_t type = payload_data[start_offset] & kTypeMask;
     start_offset += H264::kNaluTypeSize;
-    switch (type) {}
+
+    switch (type) {
+      case H264::NaluType::kSps: {
+        
+      }
+      case H264::NaluType::kPps: {
+        break;
+      }
+      case H264::NaluType::kIdr: {
+        break;
+      }
+      // Slices below don't contain SPS or PPS ids.
+      case H264::NaluType::kAud:
+      case H264::NaluType::kEndOfSequence:
+      case H264::NaluType::kEndOfStream:
+      case H264::NaluType::kFiller:
+      case H264::NaluType::kSei:
+        break;
+      case H264::NaluType::kStapA:
+      case H264::NaluType::kFuA:
+        return std::nullopt;
+    }
   }
 
   return parsed_payload;
