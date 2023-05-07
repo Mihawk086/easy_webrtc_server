@@ -1,7 +1,6 @@
 # easy_webrtc_server
 简单的webrtc流媒体服务器
 联系方式：qq864733526
-微信：Mihawk086
 # 依赖库
 * sudo apt-get install -y \
     libssl-dev \
